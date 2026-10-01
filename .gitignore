@@ -1,0 +1,6 @@
+.env
+data/
+bin/
+coverage.out
+*.test
+*.zip

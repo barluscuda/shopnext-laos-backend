@@ -1,0 +1,8 @@
+.env
+.git
+.agents
+.codex
+.aws
+data
+bin
+coverage.out
