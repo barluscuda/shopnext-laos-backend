@@ -23,7 +23,8 @@ import (
 	"time"
 )
 
-const PhoneCookie = "shopnext_phone"
+const PhoneKeyHeader = "X-Phone-Verification-Key"
+const TrustDeviceHeader = "X-Trust-Device-Key"
 const StaffCookie = "shopnext_staff"
 
 type Handler struct {
@@ -66,7 +67,13 @@ func (h *Handler) failure(c *gin.Context, err error) {
 	if status >= 500 {
 		h.Log.Error("request failed", zap.String("request_id", c.GetString("request_id")), zap.String("route", c.FullPath()), zap.Int("status", status))
 	}
-	c.AbortWithStatusJSON(status, gin.H{"error": gin.H{"code": code, "message": message}, "request_id": c.GetString("request_id")})
+	details := gin.H{"code": code, "message": message}
+	if code == "PHONE_VERIFICATION_REQUIRED" || code == "PHONE_KEY_EXPIRED" || code == "PHONE_KEY_EXHAUSTED" || code == "PHONE_OWNERSHIP_MISMATCH" || code == "INVALID_TRUST_DEVICE_KEY" {
+		details["phone_verification_required"] = true
+		details["otp_request_url"] = "/api/v1/otp/request"
+		details["otp_verify_url"] = "/api/v1/otp/verify"
+	}
+	c.AbortWithStatusJSON(status, gin.H{"error": details, "request_id": c.GetString("request_id")})
 }
 func (h *Handler) send(c *gin.Context, data any, err error) {
 	if err != nil {
@@ -92,7 +99,7 @@ func (h *Handler) setCookie(c *gin.Context, name, value string, age int) {
 	http.SetCookie(c.Writer, &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: age, HttpOnly: true, Secure: h.Config.Env == "production", SameSite: http.SameSiteLaxMode})
 }
 func (h *Handler) verified(c *gin.Context) (string, error) {
-	return h.Service.VerifiedPhone(c.Request.Context(), cookie(c, PhoneCookie))
+	return h.Service.VerifiedPhone(c.Request.Context(), c.GetHeader(PhoneKeyHeader))
 }
 func actor(c *gin.Context) domain.Actor { a, _ := c.Get("actor"); v, _ := a.(domain.Actor); return v }
 func (h *Handler) permission(p string) gin.HandlerFunc {
@@ -131,7 +138,7 @@ func (h *Handler) middleware(c *gin.Context) {
 		}
 		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key, X-ShopNext-CSRF")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key, X-ShopNext-CSRF, X-Phone-Verification-Key, X-Trust-Device-Key")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Expose-Headers", "X-Request-ID, Retry-After")
 	}
@@ -280,16 +287,14 @@ func (h *Handler) routes() {
 			h.failure(c, err)
 			return
 		}
-		h.setCookie(c, PhoneCookie, token, 7*24*3600)
-		h.send(c, gin.H{"verified": true}, nil)
+		h.send(c, gin.H{"verified": true, "verification_key": token, "expires_at": time.Now().UTC().Add(application.PhoneKeyLifetime), "max_uses": application.PhoneKeyMaxUses}, nil)
 	})
 	v.GET("/phone-verification", func(c *gin.Context) {
 		phone, err := h.verified(c)
 		h.send(c, gin.H{"verified": phone != "", "phone": phone}, err)
 	})
 	v.DELETE("/phone-verification", func(c *gin.Context) {
-		err := h.Service.ClearPhone(c.Request.Context(), cookie(c, PhoneCookie))
-		h.setCookie(c, PhoneCookie, "", -1)
+		err := h.Service.ClearPhone(c.Request.Context(), c.GetHeader(PhoneKeyHeader))
 		h.send(c, gin.H{"verified": false}, err)
 	})
 	v.POST("/orders", func(c *gin.Context) {
@@ -298,12 +303,7 @@ func (h *Handler) routes() {
 			h.failure(c, err)
 			return
 		}
-		verified, err := h.verified(c)
-		if err != nil {
-			h.failure(c, err)
-			return
-		}
-		result, err := h.Service.Checkout(c.Request.Context(), in, verified, c.GetHeader("Idempotency-Key"), c.ClientIP())
+		result, err := h.Service.CheckoutWithPhoneKey(c.Request.Context(), in, c.GetHeader(PhoneKeyHeader), c.GetHeader("Idempotency-Key"), c.ClientIP())
 		if err != nil {
 			h.failure(c, err)
 			return
@@ -311,12 +311,7 @@ func (h *Handler) routes() {
 		c.JSON(201, gin.H{"data": result})
 	})
 	v.GET("/bills", func(c *gin.Context) {
-		verified, err := h.verified(c)
-		if err != nil {
-			h.failure(c, err)
-			return
-		}
-		result, err := h.Service.Bills(c.Request.Context(), c.Query("phone"), verified)
+		result, err := h.Service.ClientBills(c.Request.Context(), c.Query("phone"), c.GetHeader(PhoneKeyHeader))
 		h.send(c, result, err)
 	})
 	v.GET("/bills/search", func(c *gin.Context) {
@@ -332,28 +327,23 @@ func (h *Handler) routes() {
 				phone = false
 			}
 		}
-		verified, err := h.verified(c)
-		if err != nil {
-			h.failure(c, err)
-			return
-		}
 		if phone {
-			result, err := h.Service.Bills(c.Request.Context(), q, verified)
+			result, err := h.Service.ClientBills(c.Request.Context(), q, c.GetHeader(PhoneKeyHeader))
 			h.send(c, gin.H{"type": "phone", "bills": result}, err)
 		} else {
-			result, err := h.Service.Bill(c.Request.Context(), q, verified, false)
+			result, err := h.Service.BillSummary(c.Request.Context(), q)
 			h.send(c, gin.H{"type": "bill_number", "bill": result}, err)
 		}
 	})
 	v.GET("/bills/:bill", func(c *gin.Context) {
-		verified, err := h.verified(c)
-		if err != nil {
-			h.failure(c, err)
-			return
-		}
-		result, err := h.Service.Bill(c.Request.Context(), c.Param("bill"), verified, false)
+		result, err := h.Service.BillSummary(c.Request.Context(), c.Param("bill"))
 		h.send(c, result, err)
 	})
+	v.GET("/bills/:bill/details", func(c *gin.Context) {
+		result, err := h.Service.ClientBill(c.Request.Context(), c.Param("bill"), c.GetHeader(PhoneKeyHeader), c.GetHeader(TrustDeviceHeader), c.GetHeader("User-Agent"))
+		h.send(c, result, err)
+	})
+
 	v.POST("/bills/:bill/payment-attempts", func(c *gin.Context) {
 		var in struct {
 			Bank string `json:"bank"`
@@ -366,22 +356,12 @@ func (h *Handler) routes() {
 			h.failure(c, err)
 			return
 		}
-		verified, err := h.verified(c)
-		if err != nil {
-			h.failure(c, err)
-			return
-		}
-		result, err := h.Service.CreateAttempt(c.Request.Context(), c.Param("bill"), in.Bank, verified)
+		result, err := h.Service.ClientCreateAttempt(c.Request.Context(), c.Param("bill"), in.Bank, c.GetHeader(PhoneKeyHeader), c.GetHeader(TrustDeviceHeader), c.GetHeader("User-Agent"))
 		h.send(c, result, err)
 	})
 	if h.Config.Env != "production" && h.Service.Payments.Name() == "dev" {
 		v.POST("/bills/:bill/simulate-payment", func(c *gin.Context) {
-			verified, err := h.verified(c)
-			if err != nil {
-				h.failure(c, err)
-				return
-			}
-			h.send(c, gin.H{"simulated": true}, h.Service.SimulatePayment(c.Request.Context(), c.Param("bill"), verified))
+			h.send(c, gin.H{"simulated": true}, h.Service.ClientSimulatePayment(c.Request.Context(), c.Param("bill"), c.GetHeader(PhoneKeyHeader), c.GetHeader(TrustDeviceHeader), c.GetHeader("User-Agent")))
 		})
 	}
 	v.POST("/webhooks/phajay", h.webhook)

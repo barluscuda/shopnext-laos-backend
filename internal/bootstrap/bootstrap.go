@@ -54,7 +54,11 @@ func Open(ctx context.Context) (*Runtime, error) {
 	payment := providers.NewPayment(cfg.PhajayURL, cfg.PhajayKey, cfg.PaymentProvider == "dev")
 	sms := providers.NewSMS(cfg.WenovaURL, cfg.WenovaToken, cfg.WenovaSender, cfg.UsePackage, cfg.SMSProvider == "dev")
 	storage := &media.Storage{Dir: cfg.UploadDir}
-	s := application.New(store, limiter, payment, sms, storage, application.Options{Production: cfg.Env == "production", Hold: cfg.Hold, LegacyPasswordHash: cfg.LegacyHash, LegacySessionSecret: cfg.LegacySecret})
+	var clientWebhook application.ClientWebhook
+	if cfg.ClientWebhookURL != "" {
+		clientWebhook = providers.NewClientWebhook(cfg.ClientWebhookURL, cfg.ClientWebhookSecret)
+	}
+	s := application.New(store, limiter, payment, sms, storage, application.Options{ClientWebhook: clientWebhook, TrustDeviceSecret: cfg.TrustDeviceSecret, Production: cfg.Env == "production", Hold: cfg.Hold, LegacyPasswordHash: cfg.LegacyHash, LegacySessionSecret: cfg.LegacySecret})
 	return &Runtime{cfg, s, store, limiter, log}, nil
 }
 func (r *Runtime) Close() { _ = r.Limiter.Close(); _ = r.Store.Close(); _ = r.Log.Sync() }

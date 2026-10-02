@@ -167,6 +167,9 @@ func (w *Worker) Tick(ctx context.Context) error {
 			failures = append(failures, err)
 		}
 	}
+	if _, err := w.DrainClientNotifications(ctx); err != nil {
+		failures = append(failures, err)
+	}
 	if _, err := w.DrainOutbox(ctx); err != nil {
 		failures = append(failures, err)
 	}

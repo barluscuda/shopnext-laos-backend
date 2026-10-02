@@ -21,9 +21,11 @@ func run() error {
 	}
 	defer rt.Close()
 	worker := &application.Worker{Service: rt.Service}
-	rt.Log.Info("worker started", zap.Duration("tick_interval", time.Minute), zap.Duration("cleanup_interval", time.Hour))
+	rt.Log.Info("worker started", zap.Duration("tick_interval", time.Minute), zap.Duration("notification_interval", 5*time.Second), zap.Duration("cleanup_interval", time.Hour))
 	ticks := time.NewTicker(time.Minute)
 	defer ticks.Stop()
+	notifications := time.NewTicker(5 * time.Second)
+	defer notifications.Stop()
 	cleanup := time.NewTicker(time.Hour)
 	defer cleanup.Stop()
 	work := func() {
@@ -41,6 +43,15 @@ func run() error {
 			return nil
 		case <-ticks.C:
 			work()
+		case <-notifications.C:
+			notificationCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
+			if _, err := worker.DrainClientNotifications(notificationCtx); err != nil && ctx.Err() == nil {
+				rt.Log.Error("client notification delivery failed", zap.Error(err))
+			}
+			if _, err := worker.DrainOutbox(notificationCtx); err != nil && ctx.Err() == nil {
+				rt.Log.Error("SMS notification delivery failed", zap.Error(err))
+			}
+			cancel()
 		case <-cleanup.C:
 			cleanupCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
 			err := rt.Service.CleanupIdempotency(cleanupCtx)

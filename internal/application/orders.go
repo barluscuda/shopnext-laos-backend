@@ -28,9 +28,16 @@ type Checkout struct {
 	Items          []CheckoutItem `json:"items"`
 }
 type CheckoutResult struct {
-	BillNumber string `json:"bill_number"`
-	PickupCode string `json:"pickup_code"`
-	TotalKip   int64  `json:"total_kip"`
+	BillNumber           string          `json:"bill_number"`
+	PickupCode           string          `json:"pickup_code"`
+	TotalKip             int64           `json:"total_kip"`
+	OrderID              string          `json:"order_id"`
+	OrderStatus          string          `json:"order_status"`
+	PaymentStatus        string          `json:"payment_status"`
+	CreatedAt            time.Time       `json:"created_at"`
+	ReservationExpiresAt *time.Time      `json:"reservation_expires_at"`
+	Payment              *domain.Attempt `json:"payment"`
+	PaymentError         string          `json:"payment_error,omitempty"`
 }
 
 func event(ctx context.Context, tx Store, bill, action, note string) error {
@@ -46,7 +53,18 @@ func enqueue(ctx context.Context, tx Store, key, phone, message string) error {
 	}
 	return tx.Insert(ctx, OutboxEvents, &domain.Outbox{Base: domain.NewBase(), Phone: phone, Message: message, DedupeKey: key, Status: "PENDING", AvailableAt: time.Now().UTC()})
 }
+func (s *Service) CheckoutWithPhoneKey(ctx context.Context, in Checkout, phoneVerificationKey, key, ip string) (CheckoutResult, error) {
+	pt, err := phoneKey(ctx, s.Store, phoneVerificationKey, in.RecipientPhone, false)
+	if err != nil {
+		return CheckoutResult{}, err
+	}
+	return s.checkout(ctx, in, pt.Phone, key, ip, phoneVerificationKey)
+}
+
 func (s *Service) Checkout(ctx context.Context, in Checkout, verified, key, ip string) (CheckoutResult, error) {
+	return s.checkout(ctx, in, verified, key, ip, "")
+}
+func (s *Service) checkout(ctx context.Context, in Checkout, verified, key, ip, phoneVerificationKey string) (CheckoutResult, error) {
 	var result CheckoutResult
 	in.RecipientPhone = domain.NormalizePhone(in.RecipientPhone)
 	in.RecipientName = strings.TrimSpace(in.RecipientName)
@@ -112,6 +130,11 @@ func (s *Service) Checkout(ctx context.Context, in Checkout, verified, key, ip s
 				if err := tx.Delete(ctx, Idempotencies, saved.ID); err != nil {
 					return err
 				}
+			}
+		}
+		if phoneVerificationKey != "" {
+			if _, err := phoneKey(ctx, tx, phoneVerificationKey, in.RecipientPhone, true); err != nil {
+				return err
 			}
 		}
 		if err := s.Rate(ctx, "order-create-phone", verified, 3, 10*time.Minute); err != nil {
@@ -207,23 +230,7 @@ func (s *Service) Checkout(ctx context.Context, in Checkout, verified, key, ip s
 			return err
 		}
 		bill := domain.BillNumber()
-		pickup := domain.Digits()
-		for retries := 0; ; retries++ {
-			if retries == 20 {
-				return domain.Fail("IDENTIFIER_CAPACITY_EXCEEDED", 503)
-			}
-			if err := tx.LockKey(ctx, "pickup:"+pickup); err != nil {
-				return err
-			}
-			n, err := tx.Count(ctx, Orders, Query{Eq: map[string]any{"pickup_code": pickup}})
-			if err != nil {
-				return err
-			}
-			if n == 0 {
-				break
-			}
-			pickup = domain.Digits()
-		}
+		pickup := ""
 		now := time.Now().UTC()
 		order := domain.Order{BillNumber: bill, PickupCode: pickup, RecipientPhone: verified, RecipientName: in.RecipientName, ExpressProviderID: provider.ID, BranchID: branch.ID, PaymentType: in.PaymentType, PaymentMethod: in.PaymentMethod, PaymentStatus: "PENDING", OrderStatus: "CONFIRMED", SubtotalKip: subtotal, ShippingFeeKip: provider.ShippingFeeKip, TotalKip: total, VerifiedAt: now, CreatedAt: now}
 		if in.PaymentType == "ONLINE" {
@@ -243,10 +250,10 @@ func (s *Service) Checkout(ctx context.Context, in Checkout, verified, key, ip s
 		if err := event(ctx, tx, bill, "CREATED", in.PaymentType); err != nil {
 			return err
 		}
-		if err := enqueue(ctx, tx, "sms:created:"+bill, verified, fmt.Sprintf("ShopNext Laos: ບິນ %s ລະຫັດຮັບ %s ລວມ %d ກີບ", bill, pickup, total)); err != nil {
+		if err := enqueue(ctx, tx, "sms:created:"+bill, verified, fmt.Sprintf("ShopNext Laos: ບິນ %s ລວມ %d ກີບ", bill, total)); err != nil {
 			return err
 		}
-		result = CheckoutResult{bill, pickup, total}
+		result = CheckoutResult{BillNumber: bill, PickupCode: pickup, TotalKip: total, OrderID: bill, OrderStatus: order.OrderStatus, PaymentStatus: order.PaymentStatus, CreatedAt: now, ReservationExpiresAt: order.ReservationExpiresAt}
 		if key != "" {
 			response, _ := json.Marshal(result)
 			if err := tx.Insert(ctx, Idempotencies, &domain.Idempotency{Base: domain.NewBase(), Scope: scope, Key: key, RequestHash: hash, Response: response, ExpiresAt: now.Add(24 * time.Hour)}); err != nil {
@@ -260,8 +267,40 @@ func (s *Service) Checkout(ctx context.Context, in Checkout, verified, key, ip s
 		return result, err
 	}
 	if created && in.PaymentType == "ONLINE" {
-		_, _ = s.CreateAttempt(ctx, result.BillNumber, in.PaymentMethod, verified)
+		attempt, err := s.CreateAttempt(ctx, result.BillNumber, in.PaymentMethod, verified)
+		if err != nil {
+			result.PaymentError = "PAYMENT_QR_UNAVAILABLE"
+		} else {
+			result.Payment = &attempt
+		}
 	}
+	// Replays return current order/payment state without regenerating a QR or
+	// consuming another phone-key use. Order creation remains successful when
+	// the external provider fails; clients can retry payment using this order ID.
+	if !created {
+		order, err := findOne[domain.Order](ctx, s.Store, Orders, Query{Eq: map[string]any{"bill_number": result.BillNumber}})
+		if err != nil {
+			return result, err
+		}
+		result.OrderID = order.BillNumber
+		result.PickupCode = order.PickupCode
+		result.OrderStatus = order.OrderStatus
+		result.PaymentStatus = order.PaymentStatus
+		result.CreatedAt = order.CreatedAt
+		result.ReservationExpiresAt = order.ReservationExpiresAt
+		if order.PaymentType == "ONLINE" {
+			attempt, err := findOne[domain.Attempt](ctx, s.Store, Attempts, Query{Eq: map[string]any{"order_id": order.BillNumber}, Sort: "created_at", Desc: true})
+			if err == nil {
+				result.Payment = &attempt
+			} else if !errors.Is(err, domain.ErrNotFound) {
+				return result, err
+			}
+			if result.Payment == nil || result.Payment.Status == "FAILED" {
+				result.PaymentError = "PAYMENT_QR_UNAVAILABLE"
+			}
+		}
+	}
+
 	return result, nil
 }
 
@@ -351,7 +390,10 @@ func (s *Service) transition(ctx context.Context, tx Store, order domain.Order, 
 		return err
 	}
 	if action == "PAID" {
-		return enqueue(ctx, tx, "sms:paid:"+order.BillNumber, order.RecipientPhone, fmt.Sprintf("ShopNext Laos: ບິນ %s ຊຳລະສຳເລັດ ລະຫັດຮັບ %s", order.BillNumber, order.PickupCode))
+		if err := s.enqueueClientPayment(ctx, tx, order, now); err != nil {
+			return err
+		}
+		return enqueue(ctx, tx, "sms:paid:"+order.BillNumber, order.RecipientPhone, fmt.Sprintf("ShopNext Laos: ບິນ %s ຊຳລະສຳເລັດ", order.BillNumber))
 	}
 	return nil
 }
@@ -422,6 +464,10 @@ func (s *Service) Bill(ctx context.Context, bill, verified string, admin bool) (
 	if _, err := s.Expire(ctx, bill); err != nil {
 		return result, err
 	}
+	return s.bill(ctx, bill, verified, admin)
+}
+func (s *Service) bill(ctx context.Context, bill, verified string, admin bool) (Bill, error) {
+	var result Bill
 	order, err := findOne[domain.Order](ctx, s.Store, Orders, Query{Eq: map[string]any{"bill_number": bill}})
 	if err != nil {
 		return result, err

@@ -2,7 +2,7 @@
   "info": {
     "name": "ShopNext Laos API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Use the cookie jar for OTP/staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; no credentials or OTPs are captured or logged."
+    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and use the cookie jar for staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged."
   },
   "variable": [
     {
@@ -17,6 +17,26 @@
     },
     {
       "key": "otp_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "phone_verification_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trust_device_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_agent",
+      "value": "ShopNext-Postman-device",
+      "type": "string"
+    },
+    {
+      "key": "pickup_code",
       "value": "",
       "type": "string"
     },
@@ -519,7 +539,7 @@
           "response": []
         },
         {
-          "name": "POST /otp/verify — Consume OTP and set seven-day phone cookie",
+          "name": "POST /otp/verify — Consume OTP and return three-day, five-use phone verification key",
           "request": {
             "method": "POST",
             "header": [
@@ -536,7 +556,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Consume OTP and set seven-day phone cookie\n\nAuthentication: Public.",
+            "description": "Consume OTP and return three-day, five-use phone verification key\n\nAuthentication: Public.",
             "url": {
               "raw": "{{base_url}}/api/v1/otp/verify",
               "host": [
@@ -562,14 +582,20 @@
           "response": []
         },
         {
-          "name": "GET /phone-verification — Read current verified phone",
+          "name": "GET /phone-verification — Check phone verification header key without consuming a use",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              }
+            ],
             "auth": {
               "type": "noauth"
             },
-            "description": "Read current verified phone\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).",
+            "description": "Check phone verification header key without consuming a use\n\nAuthentication: Phone verification header key or public (owner data requires verified phone).",
             "url": {
               "raw": "{{base_url}}/api/v1/phone-verification",
               "host": [
@@ -585,7 +611,7 @@
           "response": []
         },
         {
-          "name": "DELETE /phone-verification — Revoke verified phone cookie",
+          "name": "DELETE /phone-verification — Revoke phone verification header key",
           "request": {
             "method": "DELETE",
             "header": [
@@ -593,12 +619,17 @@
                 "key": "X-ShopNext-CSRF",
                 "value": "1",
                 "description": "Required on all browser mutations."
+              },
+              {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
               }
             ],
             "auth": {
               "type": "noauth"
             },
-            "description": "Revoke verified phone cookie\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).",
+            "description": "Revoke phone verification header key\n\nAuthentication: Phone verification header key or public (owner data requires verified phone).",
             "url": {
               "raw": "{{base_url}}/api/v1/phone-verification",
               "host": [
@@ -619,7 +650,7 @@
       "name": "Orders and bills",
       "item": [
         {
-          "name": "POST /orders — Create guest order atomically",
+          "name": "POST /orders — Create verified guest order and return online payment QR data",
           "request": {
             "method": "POST",
             "header": [
@@ -634,6 +665,11 @@
                 "description": "24h phone-scoped replay; reuse with different normalized body returns 409."
               },
               {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -641,7 +677,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Create guest order atomically\n\nAuthentication: Verified phone cookie.",
+            "description": "Create verified guest order and return online payment QR data\n\nAuthentication: Phone verification header key.\n\nChecks X-Phone-Verification-Key against recipient_phone. Consumes one use atomically with order creation. An idempotent replay returns current order and payment state without consuming another use. Pickup code is initially empty until manually assigned by staff. Online payment data includes QR/deeplink and expiry; QR failure still returns the created order (201) with payment_error so clients can retry the same order.",
             "url": {
               "raw": "{{base_url}}/api/v1/orders",
               "host": [
@@ -683,11 +719,17 @@
           "name": "GET /bills — Latest 50 orders for verified phone",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              }
+            ],
             "auth": {
               "type": "noauth"
             },
-            "description": "Latest 50 orders for verified phone\n\nAuthentication: Verified phone cookie.",
+            "description": "Latest 50 orders for verified phone\n\nAuthentication: Phone verification header key.\n\nMatching verification key required. Consumes one use; latest 50 orders only. A trusted-device key cannot authorize phone history.",
             "url": {
               "raw": "{{base_url}}/api/v1/bills?phone={{phone}}",
               "host": [
@@ -711,14 +753,20 @@
           "response": []
         },
         {
-          "name": "GET /bills/search — Search by bill number or verified phone",
+          "name": "GET /bills/search — Search public order summary by bill number, or protected phone history",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              }
+            ],
             "auth": {
               "type": "noauth"
             },
-            "description": "Search by bill number or verified phone\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).",
+            "description": "Search public order summary by bill number, or protected phone history\n\nAuthentication: Phone verification header key or public (owner data requires verified phone).\n\nBill-number search returns a public BillSummary. Phone search requires a matching verification key and consumes one use.",
             "url": {
               "raw": "{{base_url}}/api/v1/bills/search?q={{bill_number}}",
               "host": [
@@ -743,14 +791,14 @@
           "response": []
         },
         {
-          "name": "GET /bills/{bill} — Public bill, with owner-only QR",
+          "name": "GET /bills/{bill} — Public basic order status and pickup readiness",
           "request": {
             "method": "GET",
             "header": [],
             "auth": {
               "type": "noauth"
             },
-            "description": "Public bill, with owner-only QR\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).\n\nRecipient name masked for non-owner. Full phone and pickup code intentionally remain public. QR/deeplink requires matching verified phone. Lazy expiry releases an elapsed hold.",
+            "description": "Public basic order status and pickup readiness\n\nAuthentication: Public.\n\nNo credentials required. Returns statuses, creation time, total and publicly visible pickup code; excludes recipient identity, item and delivery details, and payment QR.",
             "url": {
               "raw": "{{base_url}}/api/v1/bills/{{bill_number}}",
               "host": [
@@ -777,6 +825,22 @@
                 "description": "Required on all browser mutations."
               },
               {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              },
+              {
+                "key": "X-Trust-Device-Key",
+                "value": "{{trust_device_key}}",
+                "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order.",
+                "disabled": true
+              },
+              {
+                "key": "User-Agent",
+                "value": "{{user_agent}}",
+                "description": "Required when using a trust key; must match the stored device."
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -784,7 +848,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Create replacement bank QR\n\nAuthentication: Verified phone cookie.",
+            "description": "Create replacement bank QR\n\nAuthentication: Phone verification header key or Order trusted-device header key.",
             "url": {
               "raw": "{{base_url}}/api/v1/bills/{{bill_number}}/payment-attempts",
               "host": [
@@ -819,12 +883,28 @@
                 "key": "X-ShopNext-CSRF",
                 "value": "1",
                 "description": "Required on all browser mutations."
+              },
+              {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              },
+              {
+                "key": "X-Trust-Device-Key",
+                "value": "{{trust_device_key}}",
+                "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order.",
+                "disabled": true
+              },
+              {
+                "key": "User-Agent",
+                "value": "{{user_agent}}",
+                "description": "Required when using a trust key; must match the stored device."
               }
             ],
             "auth": {
               "type": "noauth"
             },
-            "description": "Development-only payment simulation\n\nAuthentication: Verified phone cookie.\n\nNot registered in production or when a real payment provider is configured.",
+            "description": "Development-only payment simulation\n\nAuthentication: Phone verification header key or Order trusted-device header key.\n\nNot registered in production or when a real payment provider is configured.",
             "url": {
               "raw": "{{base_url}}/api/v1/bills/{{bill_number}}/simulate-payment",
               "host": [
@@ -836,6 +916,48 @@
                 "bills",
                 "{{bill_number}}",
                 "simulate-payment"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /bills/{bill}/details — Protected full order details and trusted-device key",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Phone-Verification-Key",
+                "value": "{{phone_verification_key}}",
+                "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+              },
+              {
+                "key": "X-Trust-Device-Key",
+                "value": "{{trust_device_key}}",
+                "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order.",
+                "disabled": true
+              },
+              {
+                "key": "User-Agent",
+                "value": "{{user_agent}}",
+                "description": "Actual end-user device User-Agent forwarded by Next.js."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Protected full order details and trusted-device key\n\nAuthentication: Phone verification header key or Order trusted-device header key.\n\nRequires an OTP key matching the recipient phone or a valid order-scoped trust JWT. OTP authorization consumes one use and issues a trust key. Trust authorization checks the stored User-Agent every time and does not consume an OTP use. No customer cookies are accepted. Next.js must forward the actual device User-Agent.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{bill_number}}/details",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{bill_number}}",
+                "details"
               ]
             }
           },
@@ -2899,6 +3021,51 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"reason\": \"Customer requested refund\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/orders/{bill}/pickup-code — Manually assign pickup code to a confirmed order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Manually assign pickup code to a confirmed order\n\nAuthentication: Staff cookie.\n\nOWNER, FULFILMENT or SUPPORT. Accepts a unique 1–80 character code. Order must be CONFIRMED. Writes assignment, order event, audit and pickup SMS enqueueing in one transaction. Repeating the current code succeeds without duplicate notifications.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/pickup-code",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "{{bill_number}}",
+                "pickup-code"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_code\": \"{{pickup_code}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

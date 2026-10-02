@@ -50,7 +50,8 @@ made atomically consistent across a local filesystem.
 
 ## Scheduled work and alerts
 
-Run the worker continuously. Every minute it releases expired holds, expires
+Run the worker continuously. Every five seconds it drains client callbacks and
+SMS notifications. Every minute it releases expired holds, expires
 payment attempts, replays early callbacks, polls refunds and drains 20 SMS
 messages; idempotency cleanup runs hourly. Jobs recheck state under row locks
 and allow multiple worker processes; an individual Worker object is used by
@@ -81,8 +82,10 @@ independent verification through the permission-protected refund resolve API.
 
 OTP: six digits, SHA-256 stored, five-minute TTL, 60-second resend cooldown and
 five failed verification attempts. Only the newest OTP can be used. Phone
-verification cookies are opaque, hashed in PostgreSQL, HttpOnly/SameSite=Lax,
-seven-day TTL and Secure in production. Staff cookies have an eight-hour TTL;
+verification header keys are opaque and hashed in PostgreSQL, with a three-day
+TTL and five-use limit. Customer access does not use backend cookies. Order-only
+trusted-device JWTs expire after 30 days and check stored token hashes and the
+User-Agent on every use; configure TRUST_DEVICE_SECRET in production. Staff cookies have an eight-hour TTL;
 password reset and disabling revoke sessions. Passwords use NeoShop-compatible
 scrypt. Login, mutation and audit history never stores plaintext credentials.
 
@@ -91,13 +94,17 @@ Optional `ADMIN_PASSWORD_HASH` (raw/base64 NeoShop scrypt format) plus
 named staff: the shared identity cannot provide attribution or dual-control
 separation and its sessions cannot be individually revoked (rotate the secret).
 
-Public bill-number lookup deliberately retains phone/pickup visibility from the
-original customer workflow. Consider this exposure when distributing bill links.
-Use only matching verified-phone identity for bill lists and QR retrieval.
+Public bill-number lookup returns basic status, time, total and pickup readiness,
+including the pickup code when staff has assigned it. Full recipient, delivery,
+item and QR details require an OTP header key or order-specific trust key.
+Phone history requires the matching OTP header key. Configure the signed Next.js
+payment webhook using CLIENT_PAYMENT_WEBHOOK_URL and CLIENT_PAYMENT_WEBHOOK_SECRET
+(both required in production). The worker retries delivery from the durable
+client_notifications table; monitor FAILED/DEAD records. SMS retries are independent.
 Retention/archival of orders, audit logs, provider raw callbacks, OTP/token rows,
 SMS history and files must be defined operationally before real customer data;
 only idempotency records currently have automated deletion.
 
-Six-digit globally unique pickup codes retain NeoShop's identifier space;
-allocation checks collisions under locks. The namespace has one million values,
-so an archival/code-format decision is necessary before approaching exhaustion.
+Pickup codes start empty and are entered by authorized staff. Assigned codes
+are globally unique and may contain 1–80 characters. Existing assigned codes are
+preserved by the migration. The unique index excludes empty codes.

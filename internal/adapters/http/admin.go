@@ -148,6 +148,16 @@ func (h *Handler) adminRoutes(r *gin.RouterGroup) {
 		result, err := h.Service.Bill(c.Request.Context(), c.Param("bill"), "", true)
 		h.send(c, result, err)
 	})
+	r.PUT("/orders/:bill/pickup-code", func(c *gin.Context) {
+		var in struct {
+			PickupCode string `json:"pickup_code"`
+		}
+		if err := decode(c, &in); err != nil {
+			h.failure(c, err)
+			return
+		}
+		h.send(c, gin.H{"updated": true}, h.Service.SetPickupCode(c.Request.Context(), actor(c), c.Param("bill"), in.PickupCode, c.ClientIP()))
+	})
 	for path, action := range map[string]string{"mark-paid": "PAID", "mark-delivered": "DELIVERED", "cancel": "CANCELLED"} {
 		r.POST("/orders/:bill/"+path, func(c *gin.Context) {
 			var in struct {

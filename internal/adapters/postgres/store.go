@@ -27,7 +27,7 @@ type Store struct {
 // entityAllowed is explicit so new resources cannot silently become accessible.
 func entityAllowed(e application.Entity) bool {
 	switch e {
-	case application.Categories, application.Products, application.Variants, application.Images, application.HeroSlides, application.PromoBanners, application.Providers, application.Branches, application.Orders, application.Items, application.OrderEvents, application.Attempts, application.PaymentEvents, application.Refunds, application.OTPs, application.PhoneTokens, application.StaffUsers, application.Sessions, application.Audits, application.OutboxEvents, application.SMSLogs, application.Idempotencies:
+	case application.Categories, application.Products, application.Variants, application.Images, application.HeroSlides, application.PromoBanners, application.Providers, application.Branches, application.Orders, application.Items, application.OrderEvents, application.Attempts, application.PaymentEvents, application.Refunds, application.OTPs, application.PhoneTokens, application.TrustedDevices, application.ClientNotifications, application.StaffUsers, application.Sessions, application.Audits, application.OutboxEvents, application.SMSLogs, application.Idempotencies:
 		return true
 	}
 	return false

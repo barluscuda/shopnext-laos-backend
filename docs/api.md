@@ -35,48 +35,75 @@ response schemas. Liveness returns `{"status":"ok"}` without an envelope.
 CSV export, media downloads and the OpenAPI download return their own formats.
 Order creation returns HTTP 201; other successful JSON operations return 200.
 
-## Cookies, CSRF and origins
+## Header keys, staff cookies, CSRF and origins
 
-Customers shop without accounts. OTP verification sets the `shopnext_phone`
-cookie; staff login sets `shopnext_staff`. Both are HttpOnly, SameSite=Lax and
-Secure in production. Phone verification lasts seven days; staff sessions last
-eight hours. Password reset and staff disable revoke staff sessions.
+The customer client is a Next.js server. The backend returns customer keys in
+JSON and authenticates them from headers; it does not set or accept customer
+cookies or manage a customer session. Next.js owns storage and browser delivery
+of these keys. OTP keys are opaque, stored hashed in PostgreSQL, valid for three
+days and at most five successful protected operations. Trusted-device keys are
+HS256 JWTs containing an order ID, random token ID and expiry. Only a hash of the
+random token ID is stored, together with the device User-Agent. A trust key lasts
+30 days and authorizes only its order.
 
-Send `X-ShopNext-CSRF: 1` on every mutation, including OTP requests, login,
-logout, DELETE operations and uploads. Webhooks and maintenance use their own
-authentication and are exempt from this header. The header is required for
-non-browser clients too.
+Send `X-Phone-Verification-Key: <verification_key>` for checkout or phone history.
+For order details and payment actions, send that header or
+`X-Trust-Device-Key: <trust_device_key>`. Next.js must forward the actual end-user
+`User-Agent` consistently: using its own server User-Agent would bind every
+customer key to the server instead of the customer's device. Each trust-key use
+checks both the signature and the stored token, order, User-Agent and expiry.
+A trust key cannot create an order or query another order or phone history.
 
-Browser clients must use credentials, for example `fetch(url, {credentials:
-"include", ...})`. Any supplied `Origin` must exactly match `ALLOWED_ORIGINS`.
-Preflight OPTIONS responses return 204. Choose a frontend deployment compatible
-with the cookie SameSite policy. CORS approval does not override SameSite cookie
-restrictions. Postman uses its cookie jar; do not substitute bearer authentication
-for phone or staff cookies.
+Staff login continues to use `shopnext_staff`, HttpOnly, SameSite=Lax and Secure
+in production, with an eight-hour lifetime. Staff password reset and disable
+revoke staff sessions. Staff authentication is separate from customer keys.
+
+Send `X-ShopNext-CSRF: 1` on mutations, including server requests, OTP requests,
+login, logout, DELETE operations and uploads. Provider webhooks and maintenance
+use their own authentication and are exempt. Any supplied `Origin` must exactly
+match `ALLOWED_ORIGINS`. Server requests can omit Origin. OPTIONS returns 204.
 
 ## Customer checkout workflow
 
 1. Browse `GET /products`, `/categories`, `/content` and `/delivery-options`.
    Product filters are `category` (top-level slug), `q`, `page`, `limit` and
-   `sort` (`newest`, `price-asc`, `price-desc`). Read product details by slug to
-   select a variant. `GET /geography` supplies valid province/district pairs;
+   `sort` (`newest`, `price-asc`, `price-desc`). Select a variant from product
+   details. `GET /geography` supplies valid province/district pairs;
    `GET /payment-methods` supplies banks and payment hold duration.
-2. Send `POST /otp/request` with `{"phone":"<customer phone>"}`. Only the newest
-   six-digit OTP works. OTPs expire after five minutes, resend cooldown is 60
-   seconds, and five failed verification attempts exhaust the OTP. A development
-   SMS response can include `dev_code`; production never returns it.
-3. Send `POST /otp/verify` with `phone` and `code`, then retain its cookie.
-   `GET /phone-verification` checks the session; DELETE clears it.
-4. Send `POST /orders` with the verified phone and checkout body below. Copy the
-   provider ID from delivery options and choose a valid province/city pair.
-   `city` is the geography district value. Use a branch name of 2–80 characters.
-5. Keep the returned `bill_number`, `pickup_code` and `total_kip`. Read
-   `GET /bills/{bill}`. Online owners can obtain QR/deeplink data and request a new
-   attempt with `POST /bills/{bill}/payment-attempts`, body `{"bank":"BCEL"}`.
-6. Payment confirmation comes from the authenticated provider callback. In
-   non-production with the development payment adapter, the verified owner can
-   use `POST /bills/{bill}/simulate-payment`. That route is absent in production
-   and when using a real provider.
+2. Request OTP through `POST /otp/request`, body `{"phone":"<customer phone>"}`.
+   Only the newest six-digit code works. It expires after five minutes; resend
+   cooldown is 60 seconds; five failed verification attempts exhaust the OTP.
+   Development can return `dev_code`; production never returns it.
+3. Verify through `POST /otp/verify`, body `{"phone":"<customer phone>","code":"<code>"}`.
+   Response data contains `verified`, `verification_key`, `expires_at` and
+   `max_uses: 5`. No Set-Cookie is emitted. Store the key in Next.js and forward
+   it in `X-Phone-Verification-Key`. `GET /phone-verification` checks it without
+   consuming a use; DELETE revokes it.
+4. Send `POST /orders` with that header and the checkout body below. The phone
+   must match the verified key. Use provider IDs and geography values returned
+   by the API; `city` means district. A successful new order consumes one use
+   atomically with its order and stock writes. Failed validation/state operations
+   roll back that use. Missing, invalid, expired or exhausted credentials return
+   HTTP 403 with `phone_verification_required: true` and OTP endpoint URLs.
+5. The response (201) includes `order_id` (same as `bill_number`), `pickup_code`,
+   `order_status`, `payment_status`, `created_at`, `reservation_expires_at`,
+   `total_kip` and `payment`. The pickup code is initially empty. Online payment
+   data contains the selected bank, `qr_code`, `deeplink`, amount and expiry.
+   COD returns `payment: null`. If QR generation fails, the order still exists:
+   response includes `payment_error: "PAYMENT_QR_UNAVAILABLE"`. Retry payment on
+   that order using `POST /bills/{bill}/payment-attempts`, body `{"bank":"BCEL"}`;
+   do not create another order just to obtain its QR.
+6. PhaJay calls the authenticated backend webhook. Payment approval confirms the
+   order and atomically queues a Next.js success webhook and payment-success
+   SMS. The worker delivers them outside the transaction. A development owner
+   can use `POST /bills/{bill}/simulate-payment`; this route is absent in
+   production and with a real payment adapter.
+7. Staff manually assigns the pickup code using
+   `PUT /admin/orders/{bill}/pickup-code`, body `{"pickup_code":"<code>"}`.
+   The order must be CONFIRMED; permitted roles are OWNER, FULFILMENT and SUPPORT.
+   Codes are unique when assigned, 1–80 characters, and may be alphanumeric.
+   Assignment also queues a pickup-ready SMS. Repeating the current code is a
+   successful no-op. Payment SMS never claims a pickup code is ready.
 
 Example checkout (replace placeholders before sending):
 
@@ -95,23 +122,77 @@ Example checkout (replace placeholders before sending):
 ```
 
 Use `COD_PROVIDER` for cash on delivery; omit `payment_method` for COD. Online
-banks are `BCEL`, `JDB`, `LDB`, `IB`, `STB`, `MMONEYX`. The server calculates totals
-from catalog prices and provider shipping fees and stores historical item
-snapshots. Checkout accepts 1–30 items, with 1–99 units per variant after merging
-duplicates. Recipient names must be 2–80 characters.
+banks are `BCEL`, `JDB`, `LDB`, `IB`, `STB`, `MMONEYX`. The server calculates whole
+LAK totals from catalog and shipping prices and stores item snapshots. Checkout
+accepts 1–30 rows, merging duplicates to 1–99 units per variant. Recipient and
+branch names must be 2–80 characters. Online stock is reserved until payment or
+expiry; COD stock is deducted at checkout.
 
-For retries, set `Idempotency-Key` to a unique value of at most 128 characters.
-Keep the same key and body when retrying the same checkout. Keys are scoped to
-the verified phone; changing the checkout under a live key returns
-`IDEMPOTENCY_CONFLICT`. Generate a new key for a new purchase.
+Use `Idempotency-Key` with a unique value of at most 128 characters for checkout.
+Keep the same key and body for retries. It is phone-scoped for 24 hours. Exact
+replays return the same order plus current payment data without another OTP-key
+use, even after all five uses have been spent, provided the phone key has not
+expired or been revoked. A changed body returns `IDEMPOTENCY_CONFLICT`.
 
-### Bill visibility
+## Bill search and protected details
 
-Bill-number lookup is public. Recipient phone and pickup code remain visible;
-recipient names are masked for non-owners. QR/deeplink access requires the
-matching verified phone. `GET /bills?phone=...` requires that same phone's cookie.
-`GET /bills/search?q=...` accepts a bill number or phone; phone search requires
-matching verification. Bill reads can lazily release expired payment holds.
+`GET /bills/{bill}` and bill-number `GET /bills/search?q=...` are public. They
+return `order_id`, `bill_number`, `payment_status`, `payment_successful`,
+`order_status`, `pickup_code`, `pickup_code_ready`, `created_at`, `total_kip` and
+`reservation_expires_at`. Recipient identity, item/delivery details and QR data
+require the protected details endpoint.
+
+`GET /bills/{bill}/details` requires a matching OTP verification key or an
+order-scoped trust key plus the matching User-Agent. OTP access consumes one use
+and returns full bill data plus `trust_device_key` and
+`trust_device_expires_at`. Save that key in Next.js for the customer's device.
+On subsequent requests with a valid trust key, the server returns full details
+without issuing another key or consuming an OTP use. An invalid, expired,
+revoked, wrong-order or changed-User-Agent trust key returns 403; omit it and
+verify the recipient phone again to obtain a replacement.
+
+`GET /bills?phone=...` and phone `GET /bills/search?q=...` require the matching
+OTP key and consume one use per successful request; latest 50 orders only.
+Explicit payment retries and development simulation also consume one use when
+using an OTP key. Trust-authorized order access does not consume OTP uses. Public
+summary lookup and verification-status checks do not consume uses. Bill reads
+can lazily release expired payment holds. Legacy customer cookies are ignored.
+
+## Next.js payment success webhook
+
+Configure `CLIENT_PAYMENT_WEBHOOK_URL` and a 32+ character
+`CLIENT_PAYMENT_WEBHOOK_SECRET`; production requires an HTTPS URL. Configure a
+32+ character random `TRUST_DEVICE_SECRET` for JWT signing in production.
+Development can leave the callback unconfigured; then no client webhook is
+queued. The destination is server configuration, never a checkout-supplied URL.
+
+The worker POSTs to Next.js with this body:
+
+```json
+{
+  "event_id": "<stable event ID>",
+  "type": "order.payment_succeeded",
+  "order_id": "<bill number>",
+  "payment_status": "PAID",
+  "order_status": "CONFIRMED",
+  "paid_at": "<RFC3339 timestamp>",
+  "total_kip": 70000
+}
+```
+
+Headers: `X-ShopNext-Event-ID`, `X-ShopNext-Timestamp` (Unix seconds) and
+`X-ShopNext-Signature` (hex HMAC-SHA256 of `timestamp + "." + rawBody` using the
+shared secret). Verify the signature with a timing-safe comparison and reject
+timestamps outside five minutes. Verify the signature before parsing JSON.
+Deduplicate the stable body `event_id`; retries get a fresh timestamp/signature.
+Return 2xx after durably accepting the event, then update the browser through
+Next.js. The backend does not contact a browser directly.
+
+Delivery is at least once with row leases and up to eight attempts, then DEAD.
+The worker checks every five seconds and backs off failed deliveries. SMS and
+client webhook retries are independent; payment success does not wait for either
+external service to respond. Monitor `client_notifications` for FAILED/DEAD
+rows. Public bill status remains available if notification delivery is delayed.
 
 ## Staff workflow and permissions
 
@@ -127,7 +208,7 @@ header. Retain the cookie, check `/admin/auth/session`, and log out through
 | Manage products, variants and images | OWNER, CATALOG |
 | Manage categories, providers and branches | OWNER, CATALOG |
 | Manage hero slides and promo banners | OWNER, CATALOG |
-| Mark paid or delivered | OWNER, FULFILMENT, SUPPORT |
+| Mark paid, delivered or assign pickup code | OWNER, FULFILMENT, SUPPORT |
 | Cancel orders | OWNER, SUPPORT |
 | Request refund | OWNER, FINANCE, SUPPORT |
 | Approve or resolve refund | OWNER, FINANCE |
@@ -209,12 +290,12 @@ passwords, OTPs, cookies, provider credentials or personal request bodies.
 
 Import [ShopNext Laos.postman_collection.json](shopnext-laos.postman_collection.json).
 It uses the [Postman Collection v2.1 schema](https://schema.postman.com/json/collection/v2.1.0/collection.json)
-and includes all 84 OpenAPI operations grouped by resource.
+and includes all 86 OpenAPI operations grouped by resource.
 
 1. Set `base_url` to the origin, default `http://localhost:8080`, without a trailing
    slash or `/api/v1` suffix. Keep cookie handling enabled and use the same host
    throughout the flow.
-2. Supply your test phone and `otp_code`; request and verify OTP individually.
+2. Supply your test phone and `otp_code`; request and verify OTP individually. Copy the returned key into a private `phone_verification_key` variable; for device access set `trust_device_key` and `user_agent`. Enable its header and disable the OTP header when testing trust access.
    Development `dev_code` is not automatically captured. Use local/private
    variables for credentials and OTPs; exported defaults are blank.
 3. Set delivery/catalog variables from responses: `product_slug`, `product_id`,

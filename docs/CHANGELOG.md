@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+Updated: `2026-10-02 18:28:19` (Asia/Vientiane, UTC+07:00).
+
+Base commit: `41206353dff2660a3bd1e766ada521b5b915641e`.
+Related committed API documentation: `c97c185`.
+
+### Changed
+
+- Replaced customer cookie authentication with three-day, five-use OTP header
+  keys and order-scoped trusted-device JWTs checked against the User-Agent.
+- Online checkout now returns payment QR data, and staff manually assigns
+  pickup codes after confirming an order.
+- Public bill lookup now returns basic status and pickup readiness; protected
+  details require a phone key or trusted-device key.
+- Successful PhaJay payments now queue signed Next.js webhook notifications
+  and payment SMS in the payment transaction, with durable delivery retries.
+- Added versioned migration `00002_client_order_access.sql` and updated
+  OpenAPI, API guide, feature parity, Postman collection and runtime config.
+
+### Verification
+
+- `make check`, `make integration`, `make build`, OpenAPI generation check and
+  `git diff --check` passed.
+
 Updated: `2026-10-02 16:56:49` (Asia/Vientiane, UTC+07:00).
 
 Base commit: `fd842a9d4c358cbe7a2dbc2108e4ea6a04e16d18`.

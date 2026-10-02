@@ -12,15 +12,15 @@ No customer accounts, coupons or wishlist were introduced.
 | `admin/categories` actions | Parent categories, sibling positions, cycle rejection, deletion restrictions, reorder | Category cycle integration test; API route coverage |
 | Hero slides and promo banners actions | WebP 3:1 upload, create/update/active/delete/reorder, shared image cleanup | Media/content integration and resize/validation tests |
 | Providers/branches and Laos delivery data | Flat fees, provider management, branch create/delete, deduplicated checkout branch creation, all 18 provinces/districts | Checkout, geography and management tests |
-| `lib/otp.ts`, phone verification | OTP request/verify, cooldown/attempt limits, hashed seven-day phone token, logout | HTTP workflow and OTP limit integration tests |
-| `api/orders`, order creation and stock | Guest-only verified checkout, server-priced totals, snapshot items, COD/online stock rules, idempotency | Concurrent checkout, transaction rollback, COD/snapshot tests |
-| Bill lookup/search/phone history | Public masked name + original phone/pickup visibility, owner-only QR, verified phone list (latest 50) | Public/owner HTTP access integration tests |
+| `lib/otp.ts`, phone verification | OTP request/verify, cooldown/attempt limits, hashed three-day/five-use phone header key, revocation; order-specific device JWT and User-Agent checking | HTTP workflow and OTP limit integration tests |
+| `api/orders`, order creation and stock | Guest checkout with OTP header key, server-priced totals, snapshot items, COD/online stock rules, idempotency; online response includes QR/payment data | Concurrent checkout, transaction rollback, COD/snapshot tests |
+| Bill lookup/search/phone history | Public basic status/price/time/pickup visibility; protected full details and owner-only QR; verified phone list (latest 50) | Public/owner HTTP access integration tests |
 | Payment attempts and PhaJay callbacks | Six banks, retry/supersession, expiry, authentication, canonical dedupe, amount/reference checks, early callback replay, dev simulation | Mock provider contracts, payment/expiry/early callback tests |
-| `lib/order-transitions.ts`, staff order actions | Mark paid/delivered/cancel with events, inventory consistency and permissions | Delivery/payment/cancellation/expiry integration tests |
+| `lib/order-transitions.ts`, staff order actions | Mark paid/delivered/cancel and manually assign pickup code with events, inventory consistency and permissions | Delivery/payment/cancellation/expiry integration tests |
 | `lib/refunds.ts`, refund adapters | Full refunds, request/dual approval, unknown-safe submission, polling, manual resolution, 24h deadline | Dual-control/refund integration; mock gateway tests |
 | `lib/staff-*`, legacy admin identity | Six roles, named sessions, password compatibility, bootstrap/create, disable/enable/reset/revoke, optional legacy owner | Permission/session/password tests |
 | Dashboard/order export/admin lists | Paid revenue, 14-day item/revenue trend, statuses, low stock, recent orders; paginated filters; UTF-8 CSV | HTTP reporting/export and API documentation coverage |
-| Audit, SMS history/outbox, Wenova | Transactional audit/notifications, direct OTP SMS, leased outbox, retry/dead-letter/breaker, redacted OTP logs | HTTP outbox and mock Wenova tests |
+| Audit, SMS history/outbox, Wenova | Transactional audit/notifications, direct OTP SMS, leased outbox, retry/dead-letter/breaker, redacted OTP logs; signed Next.js payment callbacks with durable retries | HTTP outbox and mock Wenova tests |
 | Cron reservation release/idempotency cleanup | Continuous worker + secret-protected expiry hook | Expiry, worker and cleanup tests |
 | Image processing | WebP magic validation, 5MB input cap, 1600px no-enlargement bound, quality 82, 3:1 content | Media unit/integration tests |
 
@@ -40,10 +40,16 @@ Live PhaJay/Wenova merchant acceptance is still an external rollout prerequisite
 especially callback authentication. Backend implementation/test coverage does
 not assert successful real-money or real-SMS deployment.
 
-API documentation: the [usage guide](api.md) explains cookie/OTP identity,
+API documentation: the [usage guide](api.md) explains header-key/OTP identity,
 checkout, staff permissions, uploads, callbacks and Postman setup. The
 [endpoint reference](api-reference.md) and
-[Postman collection](shopnext-laos.postman_collection.json) cover all 84 OpenAPI
+[Postman collection](shopnext-laos.postman_collection.json) cover all 86 OpenAPI
 operations, including root-level media. Regenerate them from OpenAPI with
 `python3 tools/generate_api_docs.py` and verify synchronization with `--check`.
 This documentation addition does not change API behavior.
+
+Client flow intentionally changed: customer cookies are replaced by header keys;
+online checkout includes payment data; pickup codes are entered by staff; public
+bill lookup returns a summary and details require verified ownership. Payment
+approval atomically queues the signed Next.js webhook and success SMS. Trust
+keys are issued on OTP-authorized details requests and expire after 30 days.

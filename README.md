@@ -52,31 +52,37 @@ explicit migration run, and `make stop` to stop the stack while preserving data.
 Start with the [human-readable API guide](docs/api.md) and
 [full endpoint reference](docs/api-reference.md). Import the
 [Postman collection](docs/shopnext-laos.postman_collection.json) to explore all
-84 operations. [OpenAPI](docs/openapi.yaml) is also served at
+86 operations. [OpenAPI](docs/openapi.yaml) is also served at
 `/api/v1/openapi.yaml`. Regenerate the reference and collection with
 `python3 tools/generate_api_docs.py`; use `--check` to detect documentation drift.
 JSON uses snake_case and `{ "data": ... }`; errors contain
 `error.code`, `error.message` and `request_id`. Lists use `pagination`.
-Every browser mutation requires `X-ShopNext-CSRF: 1`, including login, OTP,
-uploads and logout. Include credentials so HttpOnly cookies are sent.
+Every mutation requires `X-ShopNext-CSRF: 1`, including login, OTP,
+uploads and logout. Customers use header keys; staff use HttpOnly cookies.
 Origins must exactly match `ALLOWED_ORIGINS` (space-separated).
 
 Shopping sequence:
 
 1. Browse `/products`, `/categories`, `/content` and `/delivery-options`.
 2. POST `/otp/request` with `phone`, then `/otp/verify` with `phone` and `code`.
-   Development responses include `dev_code`; production never does.
+   Development OTP request responses include `dev_code`; production never does.
+   Verification returns `verification_key` (three days, five protected uses).
+   Forward it in `X-Phone-Verification-Key`; no customer cookie is used.
 3. POST `/orders` with the verified phone, recipient name, provider, province,
    city, branch name, `payment_type` (`ONLINE` or `COD_PROVIDER`) and variant
    quantities. Online orders also require a supported `payment_method`.
    Use `Idempotency-Key` for safe retries; it is scoped to the verified phone.
-4. Read `/bills/{bill}`. Only the verified owner receives QR/deeplink data.
-   Retry QR generation through `/bills/{bill}/payment-attempts`.
+4. Online checkout returns QR/deeplink data in `payment`. Read the public basic
+   status at `/bills/{bill}`; full details use `/bills/{bill}/details` with a matching
+   phone key or order-scoped trust key and device User-Agent. OTP detail access
+   issues a trusted-device JWT. Retry QR at `/bills/{bill}/payment-attempts`.
 5. The authenticated provider callback confirms online payment. With development
    payment mode only, POST `/bills/{bill}/simulate-payment` instead.
+   Successful approval queues a signed Next.js webhook and success SMS.
+6. Staff enters the pickup code via PUT `/admin/orders/{bill}/pickup-code`.
 
-Bill-number lookup is intentionally public: pickup code and recipient phone
-remain visible as in NeoShop; recipient names are masked for non-owners.
+Bill-number lookup is public for status, total, time and assigned pickup code.
+Recipient, delivery, item and QR details require verified ownership.
 Phone-based lookup requires matching OTP verification. There are no customer
 registration/login/profile endpoints. Staff log in through `/admin/auth/login`.
 
@@ -99,3 +105,9 @@ See [architecture](docs/architecture.md), [feature parity](docs/feature-parity.m
 and [operations](docs/operations.md). Real provider credentials, signature
 agreement and live merchant acceptance are deployment prerequisites; local
 contract tests do not substitute for a live payment/refund/SMS certification.
+
+Customer API access uses three-day/five-use OTP header keys and order-specific
+trusted-device JWTs. Online checkout returns payment QR data; staff assigns the
+pickup code later. Set `TRUST_DEVICE_SECRET`, `CLIENT_PAYMENT_WEBHOOK_URL` and
+`CLIENT_PAYMENT_WEBHOOK_SECRET` for production. See [the API guide](docs/api.md)
+for Next.js callback signature validation and the revised checkout flow.

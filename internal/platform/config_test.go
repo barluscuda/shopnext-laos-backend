@@ -7,6 +7,9 @@ import (
 
 func TestProductionConfiguration(t *testing.T) {
 	t.Setenv("CONFIG_FILE", "")
+	t.Setenv("TRUST_DEVICE_SECRET", strings.Repeat("t", 32))
+	t.Setenv("CLIENT_PAYMENT_WEBHOOK_URL", "https://shop.example/api/payments")
+	t.Setenv("CLIENT_PAYMENT_WEBHOOK_SECRET", strings.Repeat("n", 32))
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("PAYMENT_PROVIDER", "dev")
 	t.Setenv("SMS_PROVIDER", "dev")

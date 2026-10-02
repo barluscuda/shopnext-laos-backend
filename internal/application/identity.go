@@ -144,7 +144,7 @@ func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code string) (string,
 			return err
 		}
 		token = domain.Token(32)
-		return tx.Insert(ctx, PhoneTokens, &domain.PhoneToken{Base: domain.NewBase(), Phone: phone, TokenHash: domain.Hash(token), ExpiresAt: now.Add(7 * 24 * time.Hour)})
+		return tx.Insert(ctx, PhoneTokens, &domain.PhoneToken{Base: domain.NewBase(), Phone: phone, TokenHash: domain.Hash(token), ExpiresAt: now.Add(PhoneKeyLifetime)})
 	})
 	if err != nil {
 		return "", err
@@ -159,7 +159,13 @@ func (s *Service) VerifiedPhone(ctx context.Context, token string) (string, erro
 	if errors.Is(err, domain.ErrNotFound) {
 		return "", nil
 	}
-	return pt.Phone, err
+	if err != nil {
+		return "", err
+	}
+	if pt.Uses >= PhoneKeyMaxUses {
+		return "", nil
+	}
+	return pt.Phone, nil
 }
 func (s *Service) ClearPhone(ctx context.Context, token string) error {
 	if token == "" {

@@ -13,6 +13,7 @@ SPEC = json.loads((ROOT / 'docs/openapi.yaml').read_text())
 METHODS = {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}
 VARIABLES = {
     'base_url': 'http://localhost:8080', 'phone': '', 'otp_code': '',
+    'phone_verification_key': '', 'trust_device_key': '', 'user_agent': 'ShopNext-Postman-device', 'pickup_code': '',
     'staff_email': '', 'staff_password': '', 'new_staff_password': '',
     'new_staff_email': '', 'new_staff_name': 'Test staff',
     'product_slug': 'sample-product', 'product_id': '', 'variant_id': '',
@@ -150,7 +151,7 @@ def auth_label(operation):
     security = operation.get('security', SPEC.get('security', []))
     if not security:
         return 'Public'
-    labels = {'PhoneCookie': 'Verified phone cookie', 'StaffCookie': 'Staff cookie',
+    labels = {'PhoneVerificationKey': 'Phone verification header key', 'TrustDeviceKey': 'Order trusted-device header key', 'StaffCookie': 'Staff cookie',
               'WebhookSignature': 'Webhook HMAC signature', 'MaintenanceBearer': 'Maintenance bearer secret'}
     return ' or '.join(' + '.join(labels[k] for k in s) if s else 'public (owner data requires verified phone)' for s in security)
 
@@ -193,8 +194,8 @@ def generate():
             headers, query = [], []
             for param in op.get('parameters', []):
                 if param['in'] == 'header':
-                    value = '1' if param['name'] == 'X-ShopNext-CSRF' else '{{idempotency_key}}'
-                    headers.append({'key': param['name'], 'value': value, 'description': param.get('description', '')})
+                    value = {'X-ShopNext-CSRF': '1', 'Idempotency-Key': '{{idempotency_key}}', 'X-Phone-Verification-Key': '{{phone_verification_key}}', 'X-Trust-Device-Key': '{{trust_device_key}}', 'User-Agent': '{{user_agent}}'}.get(param['name'], '')
+                    headers.append({'key': param['name'], 'value': value, 'description': param.get('description', ''), **({'disabled': True} if param['name'] == 'X-Trust-Device-Key' else {})})
                 elif param['in'] == 'query':
                     value = example(param['schema'], param['name'])
                     if param['name'] == 'q':
@@ -264,7 +265,7 @@ def generate():
             md += ['```json', json.dumps(schema, indent=2, ensure_ascii=False), '```', '']
     collection = {'info': {'name': 'ShopNext Laos API',
         'schema': 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
-        'description': 'Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Use the cookie jar for OTP/staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; no credentials or OTPs are captured or logged.'},
+        'description': 'Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and use the cookie jar for staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged.'},
         'variable': [{'key': k, 'value': v, 'type': 'string'} for k, v in VARIABLES.items()],
         'item': [{'name': name, 'item': items} for name, items in folders.items()]}
     return {'docs/api-reference.md': '\n'.join(md),

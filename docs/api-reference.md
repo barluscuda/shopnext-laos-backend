@@ -162,7 +162,7 @@ Example (replace `{{variables}}` with real values):
 
 ## POST /api/v1/otp/verify
 
-Consume OTP and set seven-day phone cookie
+Consume OTP and return three-day, five-use phone verification key
 
 **Authentication:** Public.
 
@@ -188,13 +188,17 @@ Example (replace `{{variables}}` with real values):
 
 | Success status | Content type | Response |
 | --- | --- | --- |
-| 200 | `application/json` | object: `data` [PhoneVerification](#phoneverification) |
+| 200 | `application/json` | object: `data` [PhoneVerificationKeyResult](#phoneverificationkeyresult) |
 
 ## GET /api/v1/phone-verification
 
-Read current verified phone
+Check phone verification header key without consuming a use
 
-**Authentication:** Verified phone cookie or public (owner data requires verified phone).
+**Authentication:** Phone verification header key or public (owner data requires verified phone).
+
+| Parameter | Location | Required | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `X-Phone-Verification-Key` | header | Yes | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -202,13 +206,14 @@ Read current verified phone
 
 ## DELETE /api/v1/phone-verification
 
-Revoke verified phone cookie
+Revoke phone verification header key
 
-**Authentication:** Verified phone cookie or public (owner data requires verified phone).
+**Authentication:** Phone verification header key or public (owner data requires verified phone).
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
+| `X-Phone-Verification-Key` | header | Yes | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -216,14 +221,17 @@ Revoke verified phone cookie
 
 ## POST /api/v1/orders
 
-Create guest order atomically
+Create verified guest order and return online payment QR data
 
-**Authentication:** Verified phone cookie.
+**Authentication:** Phone verification header key.
+
+Checks X-Phone-Verification-Key against recipient_phone. Consumes one use atomically with order creation. An idempotent replay returns current order and payment state without consuming another use. Pickup code is initially empty until manually assigned by staff. Online payment data includes QR/deeplink and expiry; QR failure still returns the created order (201) with payment_error so clients can retry the same order.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
 | `Idempotency-Key` | header | No | string | 24h phone-scoped replay; reuse with different normalized body returns 409. maxLength: `128` |
+| `X-Phone-Verification-Key` | header | Yes | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
 
 **Request body:** `application/json` (required).
 
@@ -268,11 +276,14 @@ Example (replace `{{variables}}` with real values):
 
 Latest 50 orders for verified phone
 
-**Authentication:** Verified phone cookie.
+**Authentication:** Phone verification header key.
+
+Matching verification key required. Consumes one use; latest 50 orders only. A trusted-device key cannot authorize phone history.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `phone` | query | Yes | string |  |
+| `X-Phone-Verification-Key` | header | Yes | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -280,13 +291,16 @@ Latest 50 orders for verified phone
 
 ## GET /api/v1/bills/search
 
-Search by bill number or verified phone
+Search public order summary by bill number, or protected phone history
 
-**Authentication:** Verified phone cookie or public (owner data requires verified phone).
+**Authentication:** Phone verification header key or public (owner data requires verified phone).
+
+Bill-number search returns a public BillSummary. Phone search requires a matching verification key and consumes one use.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `q` | query | Yes | string |  |
+| `X-Phone-Verification-Key` | header | No | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -294,11 +308,11 @@ Search by bill number or verified phone
 
 ## GET /api/v1/bills/{bill}
 
-Public bill, with owner-only QR
+Public basic order status and pickup readiness
 
-**Authentication:** Verified phone cookie or public (owner data requires verified phone).
+**Authentication:** Public.
 
-Recipient name masked for non-owner. Full phone and pickup code intentionally remain public. QR/deeplink requires matching verified phone. Lazy expiry releases an elapsed hold.
+No credentials required. Returns statuses, creation time, total and publicly visible pickup code; excludes recipient identity, item and delivery details, and payment QR.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -306,18 +320,21 @@ Recipient name masked for non-owner. Full phone and pickup code intentionally re
 
 | Success status | Content type | Response |
 | --- | --- | --- |
-| 200 | `application/json` | object: `data` [Bill](#bill) |
+| 200 | `application/json` | object: `data` [BillSummary](#billsummary) |
 
 ## POST /api/v1/bills/{bill}/payment-attempts
 
 Create replacement bank QR
 
-**Authentication:** Verified phone cookie.
+**Authentication:** Phone verification header key or Order trusted-device header key.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `bill` | path | Yes | string |  |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
+| `X-Phone-Verification-Key` | header | No | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
+| `X-Trust-Device-Key` | header | No | string | Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order. |
+| `User-Agent` | header | No | string | Required when using a trust key; must match the stored device. |
 
 **Request body:** `application/json` (required).
 
@@ -341,7 +358,7 @@ Example (replace `{{variables}}` with real values):
 
 Development-only payment simulation
 
-**Authentication:** Verified phone cookie.
+**Authentication:** Phone verification header key or Order trusted-device header key.
 
 Not registered in production or when a real payment provider is configured.
 
@@ -349,6 +366,9 @@ Not registered in production or when a real payment provider is configured.
 | --- | --- | --- | --- | --- |
 | `bill` | path | Yes | string |  |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
+| `X-Phone-Verification-Key` | header | No | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
+| `X-Trust-Device-Key` | header | No | string | Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order. |
+| `User-Agent` | header | No | string | Required when using a trust key; must match the stored device. |
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -1926,6 +1946,56 @@ Read persisted WebP
 | --- | --- | --- |
 | 200 | `image/webp` | string |
 
+## GET /api/v1/bills/{bill}/details
+
+Protected full order details and trusted-device key
+
+**Authentication:** Phone verification header key or Order trusted-device header key.
+
+Requires an OTP key matching the recipient phone or a valid order-scoped trust JWT. OTP authorization consumes one use and issues a trust key. Trust authorization checks the stored User-Agent every time and does not consume an OTP use. No customer cookies are accepted. Next.js must forward the actual device User-Agent.
+
+| Parameter | Location | Required | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `bill` | path | Yes | string |  |
+| `X-Phone-Verification-Key` | header | No | string | OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use. |
+| `X-Trust-Device-Key` | header | No | string | Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order. |
+| `User-Agent` | header | Yes | string | Actual end-user device User-Agent forwarded by Next.js. |
+
+| Success status | Content type | Response |
+| --- | --- | --- |
+| 200 | `application/json` | object: `data` [ClientBill](#clientbill) |
+
+## PUT /api/v1/admin/orders/{bill}/pickup-code
+
+Manually assign pickup code to a confirmed order
+
+**Authentication:** Staff cookie.
+
+OWNER, FULFILMENT or SUPPORT. Accepts a unique 1–80 character code. Order must be CONFIRMED. Writes assignment, order event, audit and pickup SMS enqueueing in one transaction. Repeating the current code succeeds without duplicate notifications.
+
+| Parameter | Location | Required | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `bill` | path | Yes | string |  |
+| `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
+
+**Request body:** `application/json` (required).
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `pickup_code` | string | Yes | minLength: `1`; maxLength: `80` |
+
+Example (replace `{{variables}}` with real values):
+
+```json
+{
+  "pickup_code": "{{pickup_code}}"
+}
+```
+
+| Success status | Content type | Response |
+| --- | --- | --- |
+| 200 | `application/json` | object: `data` [ActionResult](#actionresult) |
+
 ## Data schemas
 
 Response objects below use snake_case; provider webhook fields retain their provider casing.
@@ -2356,8 +2426,15 @@ Response objects below use snake_case; provider webhook fields retain their prov
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `bill_number` | string | Yes |  |
-| `pickup_code` | string | Yes |  |
+| `pickup_code` | string | Yes | Empty until assigned manually by staff. |
 | `total_kip` | integer (int64) | Yes |  |
+| `order_id` | string | Yes | Same identifier as bill_number. |
+| `order_status` | string | Yes |  |
+| `payment_status` | string | Yes |  |
+| `created_at` | string (date-time) | Yes |  |
+| `reservation_expires_at` | string (date-time) or null | Yes |  |
+| `payment` | [Attempt](#attempt) or null | Yes |  |
+| `payment_error` | string | No | PAYMENT_QR_UNAVAILABLE when order creation succeeded but a QR could not be generated. |
 
 ### Bill
 
@@ -2437,7 +2514,7 @@ Response objects below use snake_case; provider webhook fields retain their prov
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `error` | object: `code` string, `message` string | Yes |  |
+| `error` | object: `code` string, `message` string, `phone_verification_required` boolean, `otp_request_url` string, `otp_verify_url` string | Yes |  |
 | `request_id` | string | Yes |  |
 
 ### Pagination
@@ -2593,7 +2670,7 @@ Type: object
 
 ### BillSearch
 
-Type: object: `type` object, `bills` array of [Order](#order) or object: `type` object, `bill` [Bill](#bill)
+Type: object: `type` object, `bills` array of [Order](#order) or object: `type` object, `bill` [BillSummary](#billsummary)
 
 ```json
 {
@@ -2625,7 +2702,7 @@ Type: object: `type` object, `bills` array of [Order](#order) or object: `type` 
           "const": "bill_number"
         },
         "bill": {
-          "$ref": "#/components/schemas/Bill"
+          "$ref": "#/components/schemas/BillSummary"
         }
       },
       "required": [
@@ -2648,3 +2725,75 @@ Type: object: `type` object, `bills` array of [Order](#order) or object: `type` 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `status` | object | Yes | const: `"ok"` |
+
+### PhoneVerificationKeyResult
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `verified` | boolean | Yes | const: `true` |
+| `verification_key` | string | Yes |  |
+| `expires_at` | string (date-time) | Yes |  |
+| `max_uses` | integer | Yes | const: `5` |
+
+### BillSummary
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `bill_number` | string | Yes |  |
+| `payment_status` | string | Yes |  |
+| `order_status` | string | Yes |  |
+| `pickup_code` | string | Yes |  |
+| `created_at` | string (date-time) | Yes |  |
+| `total_kip` | integer (int64) | Yes |  |
+| `reservation_expires_at` | string (date-time) or null | Yes |  |
+| `order_id` | string | Yes |  |
+| `payment_successful` | boolean | Yes |  |
+| `pickup_code_ready` | boolean | Yes |  |
+
+### ClientBill
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `bill_number` | string | Yes |  |
+| `pickup_code` | string | Yes |  |
+| `recipient_phone` | string | Yes |  |
+| `recipient_name` | string | Yes |  |
+| `express_provider_id` | string | Yes |  |
+| `branch_id` | string | Yes |  |
+| `payment_type` | string | Yes |  |
+| `payment_method` | string | Yes |  |
+| `payment_status` | string | Yes |  |
+| `order_status` | string | Yes |  |
+| `subtotal_kip` | integer (int64) | Yes |  |
+| `shipping_fee_kip` | integer (int64) | Yes |  |
+| `total_kip` | integer (int64) | Yes |  |
+| `reservation_expires_at` | string (date-time) or null | Yes |  |
+| `verified_at` | string (date-time) | Yes |  |
+| `created_at` | string (date-time) | Yes |  |
+| `recipient_name_masked` | boolean | Yes |  |
+| `items` | array or null | Yes |  |
+| `provider` | [Provider](#provider) | Yes |  |
+| `branch` | [Branch](#branch) | Yes |  |
+| `payment_attempt` | [Attempt](#attempt) or null | Yes |  |
+| `events` | array or null | No |  |
+| `refunds` | array or null | No |  |
+| `trust_device_key` | string | No | Issued when OTP authorization is used and no trust key is supplied. |
+| `trust_device_expires_at` | string (date-time) | No |  |
+
+### PickupCodeInput
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `pickup_code` | string | Yes | minLength: `1`; maxLength: `80` |
+
+### ClientPaymentEvent
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `event_id` | string | Yes |  |
+| `type` | string | Yes | const: `"order.payment_succeeded"` |
+| `order_id` | string | Yes |  |
+| `payment_status` | string | Yes | const: `"PAID"` |
+| `order_status` | string | Yes | const: `"CONFIRMED"` |
+| `paid_at` | string (date-time) | Yes |  |
+| `total_kip` | integer (int64) | Yes |  |

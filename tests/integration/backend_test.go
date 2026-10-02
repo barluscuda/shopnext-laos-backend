@@ -70,7 +70,7 @@ func setup(t *testing.T) *harness {
 	goose.SetBaseFS(migrations.FS)
 	must(t, goose.SetDialect("postgres"))
 	must(t, goose.Up(pool, "."))
-	must(t, db.DB.Exec("TRUNCATE idempotency_keys,sms_logs,outbox_events,audit_logs,staff_sessions,staff_users,phone_tokens,otp_codes,refunds,payment_events,attempts,order_events,items,orders,branches,providers,promo_banners,hero_slides,images,variants,products,categories CASCADE").Error)
+	must(t, db.DB.Exec("TRUNCATE client_notifications,trusted_devices,idempotency_keys,sms_logs,outbox_events,audit_logs,staff_sessions,staff_users,phone_tokens,otp_codes,refunds,payment_events,attempts,order_events,items,orders,branches,providers,promo_banners,hero_slides,images,variants,products,categories CASCADE").Error)
 	redisURL, err := url.Parse(os.Getenv("TEST_REDIS_URL"))
 	must(t, err)
 	if redisURL.Host != "localhost:56380" && redisURL.Host != "127.0.0.1:56380" && redisURL.Host != "shopnext-test-redis:6379" {
@@ -82,7 +82,7 @@ func setup(t *testing.T) *harness {
 	t.Cleanup(func() { _ = limiter.Close() })
 	must(t, limiter.Client.FlushDB(ctx).Err())
 	cfg := platform.Config{Env: "test", UploadDir: t.TempDir(), AllowedOrigins: []string{"http://localhost:3000"}, Hold: 15 * time.Minute, MaintenanceSecret: strings.Repeat("m", 32), WebhookSecret: strings.Repeat("w", 32), WebhookHeader: "x-phajay-signature"}
-	s := application.New(db, limiter, providers.NewPayment("", "", true), providers.NewSMS("", "", "", true, true), &media.Storage{Dir: cfg.UploadDir}, application.Options{Hold: cfg.Hold})
+	s := application.New(db, limiter, providers.NewPayment("", "", true), providers.NewSMS("", "", "", true, true), &media.Storage{Dir: cfg.UploadDir}, application.Options{Hold: cfg.Hold, TrustDeviceSecret: strings.Repeat("t", 32)})
 	r, err := api.New(s, cfg, zap.NewNop())
 	must(t, err)
 	return &harness{s, db, limiter, r, cfg}
@@ -130,8 +130,13 @@ func request(t *testing.T, h *harness, method, path string, body any, cookies ..
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-ShopNext-CSRF", "1")
 	req.Header.Set("Origin", "http://localhost:3000")
+	req.Header.Set("User-Agent", "ShopNext-test-device")
 	for _, c := range cookies {
-		req.AddCookie(c)
+		if c.Name == api.PhoneKeyHeader || c.Name == api.TrustDeviceHeader {
+			req.Header.Set(c.Name, c.Value)
+		} else {
+			req.AddCookie(c)
+		}
 	}
 	w := httptest.NewRecorder()
 	h.handler.ServeHTTP(w, req)
@@ -183,34 +188,35 @@ func TestHTTPShoppingAndAdmin(t *testing.T) {
 	expect(t, request(t, h, "POST", "/api/v1/otp/request", map[string]string{"phone": phone}), 429)
 	w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code})
 	expect(t, w, 200)
-	pc := w.Result().Cookies()[0]
-	if pc.Name != api.PhoneCookie || !pc.HttpOnly || pc.SameSite != http.SameSiteLaxMode {
-		t.Fatal("phone cookie policy")
+	pc := &http.Cookie{Name: api.PhoneKeyHeader, Value: data[map[string]any](t, w)["verification_key"].(string)}
+	if len(w.Result().Cookies()) != 0 {
+		t.Fatal("customer authentication must not set cookies")
 	}
 	expect(t, request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code}), 400)
 	expect(t, request(t, h, "GET", "/api/v1/phone-verification", nil, pc), 200)
 	w = request(t, h, "POST", "/api/v1/orders", input(v, provider, "ONLINE"), pc)
 	expect(t, w, 201)
 	bill := data[application.CheckoutResult](t, w)
-	if bill.TotalKip != 70000 || len(bill.PickupCode) != 6 {
+	if bill.TotalKip != 70000 || bill.PickupCode != "" || bill.Payment == nil || bill.Payment.QRCode == "" {
 		t.Fatalf("bad checkout %+v", bill)
 	}
 	w = request(t, h, "GET", "/api/v1/bills/"+bill.BillNumber, nil)
 	expect(t, w, 200)
-	public := data[application.Bill](t, w)
-	if public.PaymentAttempt != nil || public.RecipientName == "Alice Customer" || public.PickupCode != bill.PickupCode || public.RecipientPhone != phone {
+	public := data[application.BillSummary](t, w)
+	if public.PickupCodeReady || public.PickupCode != "" || public.PaymentSuccessful {
 		t.Fatal("public bill privacy/parity")
 	}
-	w = request(t, h, "GET", "/api/v1/bills/"+bill.BillNumber, nil, pc)
+	w = request(t, h, "GET", "/api/v1/bills/"+bill.BillNumber+"/details", nil, pc)
 	expect(t, w, 200)
-	private := data[application.Bill](t, w)
+	private := data[application.ClientBill](t, w)
 	if private.PaymentAttempt == nil || private.PaymentAttempt.QRCode == "" {
 		t.Fatal("owner QR missing")
 	}
 	expect(t, request(t, h, "GET", "/api/v1/bills?phone="+phone, nil), 403)
 	expect(t, request(t, h, "GET", "/api/v1/bills?phone="+phone, nil, pc), 200)
 	expect(t, request(t, h, "GET", "/api/v1/bills/search?q="+bill.BillNumber, nil), 200)
-	expect(t, request(t, h, "POST", "/api/v1/bills/"+bill.BillNumber+"/simulate-payment", nil, pc), 200)
+	trust := &http.Cookie{Name: api.TrustDeviceHeader, Value: private.TrustDeviceKey}
+	expect(t, request(t, h, "POST", "/api/v1/bills/"+bill.BillNumber+"/simulate-payment", nil, trust), 200)
 	expect(t, request(t, h, "GET", "/api/v1/admin/orders/"+bill.BillNumber, nil, staffCookie), 200)
 	expect(t, request(t, h, "POST", "/api/v1/admin/orders/"+bill.BillNumber+"/mark-delivered", map[string]string{"note": "collected"}, staffCookie), 200)
 	expect(t, request(t, h, "GET", "/api/v1/admin/orders/export", nil, staffCookie), 200)
@@ -256,8 +262,8 @@ func TestCheckoutAtomicIdempotencyAndStock(t *testing.T) {
 			mu.Lock()
 			if first.BillNumber == "" {
 				first = r
-			} else if first != r {
-				t.Error("idempotent response changed")
+			} else if first.BillNumber != r.BillNumber || first.PickupCode != r.PickupCode || first.TotalKip != r.TotalKip || first.OrderID != r.OrderID {
+				t.Error("idempotent order identity or total changed")
 			}
 			mu.Unlock()
 		}()
@@ -269,6 +275,10 @@ func TestCheckoutAtomicIdempotencyAndStock(t *testing.T) {
 	orders := rows[domain.Order](t, h, application.Orders, application.Query{})
 	if len(orders) != 1 {
 		t.Fatalf("orders=%d", len(orders))
+	}
+	attempts := rows[domain.Attempt](t, h, application.Attempts, application.Query{})
+	if len(attempts) != 1 || attempts[0].Status != "CREATED" || attempts[0].QRCode == "" {
+		t.Fatal("idempotent checkout must generate one payment QR")
 	}
 	vv := rows[domain.Variant](t, h, application.Variants, application.Query{})[0]
 	if vv.StockReserved != 1 || vv.StockOnHand != 4 {

@@ -12,28 +12,30 @@ import (
 type Entity string
 
 const (
-	Categories    Entity = "categories"
-	Products      Entity = "products"
-	Variants      Entity = "variants"
-	Images        Entity = "images"
-	HeroSlides    Entity = "hero_slides"
-	PromoBanners  Entity = "promo_banners"
-	Providers     Entity = "providers"
-	Branches      Entity = "branches"
-	Orders        Entity = "orders"
-	Items         Entity = "items"
-	OrderEvents   Entity = "order_events"
-	Attempts      Entity = "attempts"
-	PaymentEvents Entity = "payment_events"
-	Refunds       Entity = "refunds"
-	OTPs          Entity = "otp_codes"
-	PhoneTokens   Entity = "phone_tokens"
-	StaffUsers    Entity = "staff_users"
-	Sessions      Entity = "staff_sessions"
-	Audits        Entity = "audit_logs"
-	OutboxEvents  Entity = "outbox_events"
-	SMSLogs       Entity = "sms_logs"
-	Idempotencies Entity = "idempotency_keys"
+	Categories          Entity = "categories"
+	Products            Entity = "products"
+	Variants            Entity = "variants"
+	Images              Entity = "images"
+	HeroSlides          Entity = "hero_slides"
+	PromoBanners        Entity = "promo_banners"
+	Providers           Entity = "providers"
+	Branches            Entity = "branches"
+	Orders              Entity = "orders"
+	Items               Entity = "items"
+	OrderEvents         Entity = "order_events"
+	Attempts            Entity = "attempts"
+	PaymentEvents       Entity = "payment_events"
+	Refunds             Entity = "refunds"
+	OTPs                Entity = "otp_codes"
+	PhoneTokens         Entity = "phone_tokens"
+	TrustedDevices      Entity = "trusted_devices"
+	ClientNotifications Entity = "client_notifications"
+	StaffUsers          Entity = "staff_users"
+	Sessions            Entity = "staff_sessions"
+	Audits              Entity = "audit_logs"
+	OutboxEvents        Entity = "outbox_events"
+	SMSLogs             Entity = "sms_logs"
+	Idempotencies       Entity = "idempotency_keys"
 )
 
 // Query describes persistence-independent predicates. Field names are validated
@@ -100,6 +102,9 @@ func (e *AmbiguousError) Unwrap() error { return e.Cause }
 type SMSProvider interface {
 	Send(context.Context, string, string) (bool, error)
 }
+type ClientWebhook interface {
+	Send(context.Context, string, []byte) error
+}
 type MediaStorage interface {
 	Save(context.Context, io.Reader, string, bool) (string, error)
 	Delete(context.Context, string) error
@@ -111,18 +116,21 @@ type Options struct {
 	Hold                time.Duration
 	LegacyPasswordHash  string
 	LegacySessionSecret string
+	TrustDeviceSecret   string
+	ClientWebhook       ClientWebhook
 }
 type Service struct {
-	Store    Store
-	Limiter  RateLimiter
-	Payments PaymentProvider
-	SMS      SMSProvider
-	Media    MediaStorage
-	Options  Options
+	Store         Store
+	Limiter       RateLimiter
+	Payments      PaymentProvider
+	SMS           SMSProvider
+	Media         MediaStorage
+	Options       Options
+	ClientWebhook ClientWebhook
 }
 
 func New(store Store, limiter RateLimiter, payments PaymentProvider, sms SMSProvider, media MediaStorage, options Options) *Service {
-	return &Service{store, limiter, payments, sms, media, options}
+	return &Service{Store: store, Limiter: limiter, Payments: payments, SMS: sms, Media: media, Options: options, ClientWebhook: options.ClientWebhook}
 }
 func findOne[T any](ctx context.Context, st Store, e Entity, q Query) (T, error) {
 	var rows []T

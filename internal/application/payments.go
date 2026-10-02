@@ -9,6 +9,15 @@ import (
 )
 
 func (s *Service) CreateAttempt(ctx context.Context, bill, bank, verified string) (domain.Attempt, error) {
+	return s.createAttempt(ctx, bill, bank, verified, "", "", "")
+}
+func (s *Service) ClientCreateAttempt(ctx context.Context, bill, bank, key, trust, userAgent string) (domain.Attempt, error) {
+	if key == "" && trust == "" {
+		return domain.Attempt{}, domain.Fail("PHONE_VERIFICATION_REQUIRED", 403)
+	}
+	return s.createAttempt(ctx, bill, bank, "", key, trust, userAgent)
+}
+func (s *Service) createAttempt(ctx context.Context, bill, bank, verified, key, trust, userAgent string) (domain.Attempt, error) {
 	var attempt domain.Attempt
 	if _, ok := domain.Banks[bank]; !ok {
 		return attempt, domain.Fail("UNSUPPORTED_BANK", 400)
@@ -20,6 +29,12 @@ func (s *Service) CreateAttempt(ctx context.Context, bill, bank, verified string
 		order, err := findOne[domain.Order](ctx, tx, Orders, Query{Eq: map[string]any{"bill_number": bill}, Lock: true})
 		if err != nil {
 			return err
+		}
+		if key != "" || trust != "" {
+			if _, err := s.authorizeOrder(ctx, tx, bill, key, trust, userAgent); err != nil {
+				return err
+			}
+			verified = order.RecipientPhone
 		}
 		if verified == "" || order.RecipientPhone != verified {
 			return domain.Fail("FORBIDDEN", 403)
@@ -60,6 +75,7 @@ func (s *Service) CreateAttempt(ctx context.Context, bill, bank, verified string
 			return nil
 		}
 		if providerErr != nil {
+			attempt.Status = "FAILED"
 			attempt.LastError = "QR generation failed; retry allowed"
 			return tx.Update(ctx, Attempts, current.ID, changed(map[string]any{"status": "FAILED", "last_error": attempt.LastError}))
 		}
@@ -81,6 +97,9 @@ func (s *Service) CreateAttempt(ctx context.Context, bill, bank, verified string
 	return attempt, nil
 }
 func (s *Service) Webhook(ctx context.Context, raw []byte) (string, error) {
+	return s.webhook(ctx, raw, nil, false)
+}
+func (s *Service) webhook(ctx context.Context, raw []byte, authorize func(Store) error, requireApplied bool) (string, error) {
 	callback, err := s.Payments.ParseCallback(raw)
 	if err != nil {
 		return "", err
@@ -89,6 +108,11 @@ func (s *Service) Webhook(ctx context.Context, raw []byte) (string, error) {
 	err = s.Store.Transaction(ctx, func(tx Store) error {
 		if err := tx.LockKey(ctx, "webhook:"+callback.DedupeKey); err != nil {
 			return err
+		}
+		if authorize != nil {
+			if err := authorize(tx); err != nil {
+				return err
+			}
 		}
 		record, err := findOne[domain.PaymentEvent](ctx, tx, PaymentEvents, Query{Eq: map[string]any{"dedupe_key": callback.DedupeKey}})
 		if err != nil && !errors.Is(err, domain.ErrNotFound) {
@@ -105,6 +129,9 @@ func (s *Service) Webhook(ctx context.Context, raw []byte) (string, error) {
 			}
 		}
 		outcome, err = s.processPaymentEvent(ctx, tx, record)
+		if err == nil && requireApplied && outcome != "APPLIED" {
+			return domain.Fail("INVALID_STATE", 409)
+		}
 		return err
 	})
 	return outcome, err
@@ -174,25 +201,50 @@ func (s *Service) ReconcileEvents(ctx context.Context) error {
 	}
 	return nil
 }
-func (s *Service) SimulatePayment(ctx context.Context, bill, verified string) error {
+func (s *Service) simulation(ctx context.Context, bill string) (domain.Order, []byte, error) {
 	if s.Options.Production || s.Payments.Name() != "dev" {
-		return domain.Fail("NOT_FOUND", 404)
+		return domain.Order{}, nil, domain.Fail("NOT_FOUND", 404)
 	}
 	order, err := findOne[domain.Order](ctx, s.Store, Orders, Query{Eq: map[string]any{"bill_number": bill}})
+	if err != nil {
+		return order, nil, err
+	}
+	attempt, err := findOne[domain.Attempt](ctx, s.Store, Attempts, Query{Eq: map[string]any{"order_id": bill, "status": "CREATED"}, Sort: "created_at", Desc: true})
+	if err != nil {
+		return order, nil, err
+	}
+	if attempt.ProviderTransactionID == nil {
+		return order, nil, domain.Fail("INVALID_STATE", 409)
+	}
+	raw := []byte(fmt.Sprintf(`{"transactionId":%q,"billNumber":%q,"txnAmount":%d,"status":"PAYMENT_COMPLETED","refNo":"simulation"}`, *attempt.ProviderTransactionID, bill, order.TotalKip))
+	return order, raw, nil
+}
+func (s *Service) SimulatePayment(ctx context.Context, bill, verified string) error {
+	order, raw, err := s.simulation(ctx, bill)
 	if err != nil {
 		return err
 	}
 	if verified == "" || verified != order.RecipientPhone {
 		return domain.Fail("FORBIDDEN", 403)
 	}
-	attempt, err := findOne[domain.Attempt](ctx, s.Store, Attempts, Query{Eq: map[string]any{"order_id": bill, "status": "CREATED"}, Sort: "created_at", Desc: true})
+	_, err = s.Webhook(ctx, raw)
+	return err
+}
+func (s *Service) ClientSimulatePayment(ctx context.Context, bill, key, trust, userAgent string) error {
+	if key == "" && trust == "" {
+		return domain.Fail("PHONE_VERIFICATION_REQUIRED", 403)
+	}
+	_, raw, err := s.simulation(ctx, bill)
 	if err != nil {
 		return err
 	}
-	if attempt.ProviderTransactionID == nil {
-		return domain.Fail("INVALID_STATE", 409)
-	}
-	raw := []byte(fmt.Sprintf(`{"transactionId":%q,"billNumber":%q,"txnAmount":%d,"status":"PAYMENT_COMPLETED","refNo":"simulation"}`, *attempt.ProviderTransactionID, bill, order.TotalKip))
-	_, err = s.Webhook(ctx, raw)
+	_, err = s.webhook(ctx, raw, func(tx Store) error {
+		// Match payment retries: lock the order before consuming the phone key.
+		if _, err := findOne[domain.Order](ctx, tx, Orders, Query{Eq: map[string]any{"bill_number": bill}, Lock: true}); err != nil {
+			return err
+		}
+		_, err := s.authorizeOrder(ctx, tx, bill, key, trust, userAgent)
+		return err
+	}, true)
 	return err
 }

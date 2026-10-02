@@ -253,6 +253,25 @@ type PhoneToken struct {
 	Phone     string    `json:"phone"`
 	TokenHash string    `json:"-"`
 	ExpiresAt time.Time `json:"expires_at"`
+	Uses      int       `json:"uses"`
+}
+type TrustedDevice struct {
+	Base
+	OrderID   string    `json:"order_id"`
+	TokenHash string    `json:"-"`
+	UserAgent string    `json:"-"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+type ClientNotification struct {
+	Base
+	OrderID     string          `json:"order_id"`
+	Payload     json.RawMessage `json:"-"`
+	Status      string          `json:"status"`
+	Attempts    int             `json:"attempts"`
+	AvailableAt time.Time       `json:"available_at"`
+	LeaseUntil  *time.Time      `json:"lease_until"`
+	SentAt      *time.Time      `json:"sent_at"`
+	LastError   string          `json:"last_error"`
 }
 type Staff struct {
 	Base

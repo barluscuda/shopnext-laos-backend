@@ -3,7 +3,7 @@
   "info": {
     "title": "ShopNext Laos",
     "version": "1.0.0",
-    "description": "Developed by barluscuda. Account-free NeoShop shopping behavior; redesigned API. Integer LAK money. Cookie authentication, exact-origin credentialed CORS, CSRF header for mutations. Staff permissions are enforced per capability; see operations and feature parity docs."
+    "description": "Developed by barluscuda. Account-free shopping; integer LAK money. Customer OTP/trusted-device header keys, staff cookie authentication, exact-origin CORS and CSRF header for mutations. See API guide for Next.js payment callbacks."
   },
   "servers": [
     {
@@ -807,7 +807,7 @@
     "/otp/verify": {
       "post": {
         "operationId": "post__otp_verify",
-        "summary": "Consume OTP and set seven-day phone cookie",
+        "summary": "Consume OTP and return three-day, five-use phone verification key",
         "tags": [
           "Shopping"
         ],
@@ -823,6 +823,79 @@
             },
             "description": "Required on all browser mutations."
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PhoneVerificationKeyResult"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error502"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OTPVerify"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/phone-verification": {
+      "get": {
+        "operationId": "get__phone_verification",
+        "summary": "Check phone verification header key without consuming a use",
+        "tags": [
+          "Shopping"
+        ],
+        "security": [
+          {
+            "PhoneVerificationKey": []
+          },
+          {}
         ],
         "responses": {
           "200": {
@@ -872,89 +945,27 @@
             "$ref": "#/components/responses/Error503"
           }
         },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OTPVerify"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/phone-verification": {
-      "get": {
-        "operationId": "get__phone_verification",
-        "summary": "Read current verified phone",
-        "tags": [
-          "Shopping"
-        ],
-        "security": [
+        "parameters": [
           {
-            "PhoneCookie": []
-          },
-          {}
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PhoneVerification"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
-          "401": {
-            "$ref": "#/components/responses/Error401"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
-          },
-          "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "429": {
-            "$ref": "#/components/responses/Error429"
-          },
-          "500": {
-            "$ref": "#/components/responses/Error500"
-          },
-          "502": {
-            "$ref": "#/components/responses/Error502"
-          },
-          "503": {
-            "$ref": "#/components/responses/Error503"
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
           }
-        }
+        ]
       },
       "delete": {
         "operationId": "delete__phone_verification",
-        "summary": "Revoke verified phone cookie",
+        "summary": "Revoke phone verification header key",
         "tags": [
           "Shopping"
         ],
         "security": [
           {
-            "PhoneCookie": []
+            "PhoneVerificationKey": []
           },
           {}
         ],
@@ -968,6 +979,15 @@
               "const": "1"
             },
             "description": "Required on all browser mutations."
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
           }
         ],
         "responses": {
@@ -1023,13 +1043,13 @@
     "/orders": {
       "post": {
         "operationId": "post__orders",
-        "summary": "Create guest order atomically",
+        "summary": "Create verified guest order and return online payment QR data",
         "tags": [
           "Shopping"
         ],
         "security": [
           {
-            "PhoneCookie": []
+            "PhoneVerificationKey": []
           }
         ],
         "parameters": [
@@ -1052,6 +1072,15 @@
               "maxLength": 128
             },
             "description": "24h phone-scoped replay; reuse with different normalized body returns 409."
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
           }
         ],
         "responses": {
@@ -1111,7 +1140,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Checks X-Phone-Verification-Key against recipient_phone. Consumes one use atomically with order creation. An idempotent replay returns current order and payment state without consuming another use. Pickup code is initially empty until manually assigned by staff. Online payment data includes QR/deeplink and expiry; QR failure still returns the created order (201) with payment_error so clients can retry the same order."
       }
     },
     "/bills": {
@@ -1123,7 +1153,7 @@
         ],
         "security": [
           {
-            "PhoneCookie": []
+            "PhoneVerificationKey": []
           }
         ],
         "parameters": [
@@ -1134,6 +1164,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
           }
         ],
         "responses": {
@@ -1186,19 +1225,20 @@
           "503": {
             "$ref": "#/components/responses/Error503"
           }
-        }
+        },
+        "description": "Matching verification key required. Consumes one use; latest 50 orders only. A trusted-device key cannot authorize phone history."
       }
     },
     "/bills/search": {
       "get": {
         "operationId": "get__bills_search",
-        "summary": "Search by bill number or verified phone",
+        "summary": "Search public order summary by bill number, or protected phone history",
         "tags": [
           "Shopping"
         ],
         "security": [
           {
-            "PhoneCookie": []
+            "PhoneVerificationKey": []
           },
           {}
         ],
@@ -1210,6 +1250,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
           }
         ],
         "responses": {
@@ -1259,22 +1308,18 @@
           "503": {
             "$ref": "#/components/responses/Error503"
           }
-        }
+        },
+        "description": "Bill-number search returns a public BillSummary. Phone search requires a matching verification key and consumes one use."
       }
     },
     "/bills/{bill}": {
       "get": {
         "operationId": "get__bills__bill_",
-        "summary": "Public bill, with owner-only QR",
+        "summary": "Public basic order status and pickup readiness",
         "tags": [
           "Shopping"
         ],
-        "security": [
-          {
-            "PhoneCookie": []
-          },
-          {}
-        ],
+        "security": [],
         "parameters": [
           {
             "name": "bill",
@@ -1292,15 +1337,15 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": false,
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/Bill"
+                      "$ref": "#/components/schemas/BillSummary"
                     }
                   },
                   "required": [
                     "data"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
@@ -1333,7 +1378,7 @@
             "$ref": "#/components/responses/Error503"
           }
         },
-        "description": "Recipient name masked for non-owner. Full phone and pickup code intentionally remain public. QR/deeplink requires matching verified phone. Lazy expiry releases an elapsed hold."
+        "description": "No credentials required. Returns statuses, creation time, total and publicly visible pickup code; excludes recipient identity, item and delivery details, and payment QR."
       }
     },
     "/bills/{bill}/payment-attempts": {
@@ -1345,7 +1390,10 @@
         ],
         "security": [
           {
-            "PhoneCookie": []
+            "PhoneVerificationKey": []
+          },
+          {
+            "TrustDeviceKey": []
           }
         ],
         "parameters": [
@@ -1366,6 +1414,33 @@
               "const": "1"
             },
             "description": "Required on all browser mutations."
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+          },
+          {
+            "name": "X-Trust-Device-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order."
+          },
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required when using a trust key; must match the stored device."
           }
         ],
         "responses": {
@@ -1437,7 +1512,10 @@
         ],
         "security": [
           {
-            "PhoneCookie": []
+            "PhoneVerificationKey": []
+          },
+          {
+            "TrustDeviceKey": []
           }
         ],
         "parameters": [
@@ -1458,6 +1536,33 @@
               "const": "1"
             },
             "description": "Required on all browser mutations."
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+          },
+          {
+            "name": "X-Trust-Device-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order."
+          },
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Required when using a trust key; must match the stored device."
           }
         ],
         "responses": {
@@ -7467,6 +7572,202 @@
           }
         ]
       }
+    },
+    "/bills/{bill}/details": {
+      "get": {
+        "operationId": "get__bills__bill__details",
+        "summary": "Protected full order details and trusted-device key",
+        "tags": [
+          "Shopping"
+        ],
+        "security": [
+          {
+            "PhoneVerificationKey": []
+          },
+          {
+            "TrustDeviceKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bill",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Phone-Verification-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+          },
+          {
+            "name": "X-Trust-Device-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order."
+          },
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Actual end-user device User-Agent forwarded by Next.js."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ClientBill"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error502"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "description": "Requires an OTP key matching the recipient phone or a valid order-scoped trust JWT. OTP authorization consumes one use and issues a trust key. Trust authorization checks the stored User-Agent every time and does not consume an OTP use. No customer cookies are accepted. Next.js must forward the actual device User-Agent."
+      }
+    },
+    "/admin/orders/{bill}/pickup-code": {
+      "put": {
+        "operationId": "put__admin_orders__bill__pickup_code",
+        "summary": "Manually assign pickup code to a confirmed order",
+        "tags": [
+          "Staff"
+        ],
+        "security": [
+          {
+            "StaffCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bill",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-ShopNext-CSRF",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "1"
+            },
+            "description": "Required on all browser mutations."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ActionResult"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error502"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PickupCodeInput"
+              }
+            }
+          }
+        },
+        "description": "OWNER, FULFILMENT or SUPPORT. Accepts a unique 1–80 character code. Order must be CONFIRMED. Writes assignment, order event, audit and pickup SMS enqueueing in one transaction. Repeating the current code succeeds without duplicate notifications."
+      }
     }
   },
   "components": {
@@ -8825,17 +9126,63 @@
             "type": "string"
           },
           "pickup_code": {
-            "type": "string"
+            "type": "string",
+            "description": "Empty until assigned manually by staff."
           },
           "total_kip": {
             "type": "integer",
             "format": "int64"
+          },
+          "order_id": {
+            "type": "string",
+            "description": "Same identifier as bill_number."
+          },
+          "order_status": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reservation_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attempt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payment_error": {
+            "type": "string",
+            "description": "PAYMENT_QR_UNAVAILABLE when order creation succeeded but a QR could not be generated."
           }
         },
         "required": [
           "bill_number",
           "pickup_code",
-          "total_kip"
+          "total_kip",
+          "order_id",
+          "order_status",
+          "payment_status",
+          "created_at",
+          "reservation_expires_at",
+          "payment"
         ]
       },
       "Bill": {
@@ -9053,6 +9400,15 @@
                 "type": "string"
               },
               "message": {
+                "type": "string"
+              },
+              "phone_verification_required": {
+                "type": "boolean"
+              },
+              "otp_request_url": {
+                "type": "string"
+              },
+              "otp_verify_url": {
                 "type": "string"
               }
             },
@@ -9499,7 +9855,7 @@
                 "const": "bill_number"
               },
               "bill": {
-                "$ref": "#/components/schemas/Bill"
+                "$ref": "#/components/schemas/BillSummary"
               }
             },
             "required": [
@@ -9532,14 +9888,169 @@
         "required": [
           "status"
         ]
+      },
+      "PhoneVerificationKeyResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "const": true
+          },
+          "verification_key": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "max_uses": {
+            "type": "integer",
+            "const": 5
+          }
+        },
+        "required": [
+          "verified",
+          "verification_key",
+          "expires_at",
+          "max_uses"
+        ]
+      },
+      "BillSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bill_number": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string"
+          },
+          "order_status": {
+            "type": "string"
+          },
+          "pickup_code": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total_kip": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reservation_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_id": {
+            "type": "string"
+          },
+          "payment_successful": {
+            "type": "boolean"
+          },
+          "pickup_code_ready": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bill_number",
+          "payment_status",
+          "order_status",
+          "pickup_code",
+          "created_at",
+          "total_kip",
+          "reservation_expires_at",
+          "order_id",
+          "payment_successful",
+          "pickup_code_ready"
+        ]
+      },
+      "ClientBill": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Bill"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "trust_device_key": {
+                "type": "string",
+                "description": "Issued when OTP authorization is used and no trust key is supplied."
+              },
+              "trust_device_expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ]
+      },
+      "PickupCodeInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pickup_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "pickup_code"
+        ]
+      },
+      "ClientPaymentEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "order.payment_succeeded"
+          },
+          "order_id": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string",
+            "const": "PAID"
+          },
+          "order_status": {
+            "type": "string",
+            "const": "CONFIRMED"
+          },
+          "paid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total_kip": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "event_id",
+          "type",
+          "order_id",
+          "payment_status",
+          "order_status",
+          "paid_at",
+          "total_kip"
+        ]
       }
     },
     "securitySchemes": {
-      "PhoneCookie": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "shopnext_phone"
-      },
       "StaffCookie": {
         "type": "apiKey",
         "in": "cookie",
@@ -9554,6 +10065,18 @@
       "MaintenanceBearer": {
         "type": "http",
         "scheme": "bearer"
+      },
+      "PhoneVerificationKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Phone-Verification-Key",
+        "description": "OTP verification key, valid for three days and five protected operations. Exact checkout replays do not consume another use."
+      },
+      "TrustDeviceKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Trust-Device-Key",
+        "description": "Order-scoped trusted-device JWT. User-Agent must match the stored device. Valid for 30 days; it does not authorize another order."
       }
     },
     "responses": {
@@ -9651,6 +10174,58 @@
             "schema": {
               "$ref": "#/components/schemas/Error"
             }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "clientPaymentSucceeded": {
+      "post": {
+        "summary": "Signed payment success notification to the configured Next.js server",
+        "description": "Queued atomically with payment approval and delivered by the worker. At least once delivery, up to eight attempts. Receiver deduplicates event_id and verifies hex HMAC-SHA256(secret, timestamp + \".\" + rawBody), with a five-minute timestamp window. Configure CLIENT_PAYMENT_WEBHOOK_URL and CLIENT_PAYMENT_WEBHOOK_SECRET. Production requires HTTPS.",
+        "parameters": [
+          {
+            "name": "X-ShopNext-Event-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Same as body event_id."
+          },
+          {
+            "name": "X-ShopNext-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unix timestamp in seconds, refreshed on each delivery attempt."
+          },
+          {
+            "name": "X-ShopNext-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hex HMAC-SHA256."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPaymentEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event accepted; any 2xx stops retries."
           }
         }
       }
