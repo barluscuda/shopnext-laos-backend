@@ -49,7 +49,12 @@ explicit migration run, and `make stop` to stop the stack while preserving data.
 
 ## API
 
-[OpenAPI](docs/openapi.yaml) is also served at `/api/v1/openapi.yaml`.
+Start with the [human-readable API guide](docs/api.md) and
+[full endpoint reference](docs/api-reference.md). Import the
+[Postman collection](docs/shopnext-laos.postman_collection.json) to explore all
+84 operations. [OpenAPI](docs/openapi.yaml) is also served at
+`/api/v1/openapi.yaml`. Regenerate the reference and collection with
+`python3 tools/generate_api_docs.py`; use `--check` to detect documentation drift.
 JSON uses snake_case and `{ "data": ... }`; errors contain
 `error.code`, `error.message` and `request_id`. Lists use `pagination`.
 Every browser mutation requires `X-ShopNext-CSRF: 1`, including login, OTP,

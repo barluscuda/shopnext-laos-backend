@@ -39,3 +39,11 @@ codes; CSV cells are protected against spreadsheet formula injection.
 Live PhaJay/Wenova merchant acceptance is still an external rollout prerequisite,
 especially callback authentication. Backend implementation/test coverage does
 not assert successful real-money or real-SMS deployment.
+
+API documentation: the [usage guide](api.md) explains cookie/OTP identity,
+checkout, staff permissions, uploads, callbacks and Postman setup. The
+[endpoint reference](api-reference.md) and
+[Postman collection](shopnext-laos.postman_collection.json) cover all 84 OpenAPI
+operations, including root-level media. Regenerate them from OpenAPI with
+`python3 tools/generate_api_docs.py` and verify synchronization with `--check`.
+This documentation addition does not change API behavior.

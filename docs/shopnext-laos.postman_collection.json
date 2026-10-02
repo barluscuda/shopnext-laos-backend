@@ -1,0 +1,3693 @@
+{
+  "info": {
+    "name": "ShopNext Laos API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Use the cookie jar for OTP/staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; no credentials or OTPs are captured or logged."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "phone",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otp_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_staff_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_staff_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_staff_name",
+      "value": "Test staff",
+      "type": "string"
+    },
+    {
+      "key": "product_slug",
+      "value": "sample-product",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "variant_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "image_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "provider_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "branch_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hero_slide_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "promo_banner_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staff_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refund_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bill_number",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "province",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "city",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "branch_name",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "recipient_name",
+      "value": "Test customer",
+      "type": "string"
+    },
+    {
+      "key": "payment_method",
+      "value": "BCEL",
+      "type": "string"
+    },
+    {
+      "key": "idempotency_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_url",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "filename",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "provider_transaction_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "provider_refund_bill_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "maintenance_secret",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhook_signature",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhook_signature_header",
+      "value": "x-phajay-signature",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health and specification",
+      "item": [
+        {
+          "name": "GET /health/live — Process liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Process liveness\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/health/live",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health",
+                "live"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /health/ready — PostgreSQL and Redis readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "PostgreSQL and Redis readiness\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/health/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health",
+                "ready"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /openapi.yaml — Download this API specification",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Download this API specification\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/openapi.yaml",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "openapi.yaml"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Shopping",
+      "item": [
+        {
+          "name": "GET /products — Browse active catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Browse active catalog\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "category",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "sort",
+                  "value": "newest",
+                  "disabled": true,
+                  "description": "enum: `[\"newest\", \"price-asc\", \"price-desc\"]`; default: `\"newest\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /products/{slug} — Product details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Product details\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/products/{{product_slug}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{product_slug}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /products/{slug}/related — Up to four related products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Up to four related products\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/products/{{product_slug}}/related",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{product_slug}}",
+                "related"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /categories — All categories in sibling order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "All categories in sibling order\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /content — Active hero slides and promotions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Active hero slides and promotions\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/content",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "content"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /delivery-options — Delivery providers and branches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Delivery providers and branches\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/delivery-options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "delivery-options"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /geography — Laos provinces and districts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Laos provinces and districts\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/geography",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "geography"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /payment-methods — Enabled payment banks and hold duration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Enabled payment banks and hold duration\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-methods",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payment-methods"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phone verification",
+      "item": [
+        {
+          "name": "POST /otp/request — Send six-digit SMS OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Send six-digit SMS OTP\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/otp/request",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "otp",
+                "request"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /otp/verify — Consume OTP and set seven-day phone cookie",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Consume OTP and set seven-day phone cookie\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/otp/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "otp",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{otp_code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /phone-verification — Read current verified phone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Read current verified phone\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).",
+            "url": {
+              "raw": "{{base_url}}/api/v1/phone-verification",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "phone-verification"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /phone-verification — Revoke verified phone cookie",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Revoke verified phone cookie\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).",
+            "url": {
+              "raw": "{{base_url}}/api/v1/phone-verification",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "phone-verification"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders and bills",
+      "item": [
+        {
+          "name": "POST /orders — Create guest order atomically",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}",
+                "description": "24h phone-scoped replay; reuse with different normalized body returns 409."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create guest order atomically\n\nAuthentication: Verified phone cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient_name\": \"{{recipient_name}}\",\n  \"recipient_phone\": \"{{phone}}\",\n  \"provider_id\": \"{{provider_id}}\",\n  \"province\": \"{{province}}\",\n  \"city\": \"{{city}}\",\n  \"branch_name\": \"{{branch_name}}\",\n  \"payment_type\": \"ONLINE\",\n  \"payment_method\": \"{{payment_method}}\",\n  \"items\": [\n    {\n      \"variant_id\": \"{{variant_id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.bill_number) pm.collectionVariables.set(\"bill_number\", data.bill_number);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /bills — Latest 50 orders for verified phone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Latest 50 orders for verified phone\n\nAuthentication: Verified phone cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills?phone={{phone}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills"
+              ],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "{{phone}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /bills/search — Search by bill number or verified phone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Search by bill number or verified phone\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).",
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/search?q={{bill_number}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{bill_number}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /bills/{bill} — Public bill, with owner-only QR",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Public bill, with owner-only QR\n\nAuthentication: Verified phone cookie or public (owner data requires verified phone).\n\nRecipient name masked for non-owner. Full phone and pickup code intentionally remain public. QR/deeplink requires matching verified phone. Lazy expiry releases an elapsed hold.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{bill_number}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{bill_number}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /bills/{bill}/payment-attempts — Create replacement bank QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create replacement bank QR\n\nAuthentication: Verified phone cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{bill_number}}/payment-attempts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{bill_number}}",
+                "payment-attempts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bank\": \"{{payment_method}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /bills/{bill}/simulate-payment — Development-only payment simulation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Development-only payment simulation\n\nAuthentication: Verified phone cookie.\n\nNot registered in production or when a real payment provider is configured.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/bills/{{bill_number}}/simulate-payment",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bills",
+                "{{bill_number}}",
+                "simulate-payment"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Callbacks and maintenance",
+      "item": [
+        {
+          "name": "POST /webhooks/phajay — Authenticated, deduplicated payment callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "{{webhook_signature_header}}",
+                "value": "{{webhook_signature}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Authenticated, deduplicated payment callback\n\nAuthentication: Webhook HMAC signature.\n\nHex HMAC-SHA256 of raw body. Merchant callback authentication scheme must be agreed before rollout. Unsigned acceptance only with development provider outside production.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/webhooks/phajay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "webhooks",
+                "phajay"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"{{provider_transaction_id}}\",\n  \"billNumber\": \"{{bill_number}}\",\n  \"txnAmount\": 1,\n  \"status\": \"PAYMENT_COMPLETED\",\n  \"refNo\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /maintenance/release-expired — Release up to 100 expired reservations",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{maintenance_secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Release up to 100 expired reservations\n\nAuthentication: Maintenance bearer secret.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/maintenance/release-expired",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "maintenance",
+                "release-expired"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Auth",
+      "item": [
+        {
+          "name": "POST /admin/auth/login — Log in named staff or optional legacy owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Log in named staff or optional legacy owner\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{staff_email}}\",\n  \"password\": \"{{staff_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/auth/session — Read staff identity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Read staff identity\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/auth/session",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "auth",
+                "session"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/auth/logout — Revoke staff cookie",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Revoke staff cookie\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Dashboard",
+      "item": [
+        {
+          "name": "GET /admin/dashboard — Revenue, trends, statuses and low stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Revenue, trends, statuses and low stock\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "dashboard"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Products",
+      "item": [
+        {
+          "name": "GET /admin/products — List products (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List products (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "deleted",
+                  "value": "exclude",
+                  "disabled": true,
+                  "description": "enum: `[\"exclude\", \"include\", \"only\"]`; default: `\"exclude\"`"
+                },
+                {
+                  "key": "category_id",
+                  "value": "{{category_id}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/products — Create product with initial variants/images",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create product with initial variants/images\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"sku\": \"SAMPLE-001\",\n  \"name\": \"Sample item\",\n  \"name_en\": \"Sample item\",\n  \"slug\": \"sample-item\",\n  \"description\": \"sample\",\n  \"base_price_kip\": 1,\n  \"status\": \"ACTIVE\",\n  \"initial_stock\": 1,\n  \"variants\": [\n    {\n      \"sku\": \"SAMPLE-001\",\n      \"attributes\": {},\n      \"price_override_kip\": 1,\n      \"stock_on_hand\": 1,\n      \"position\": 1\n    }\n  ],\n  \"images\": [\n    {\n      \"url\": \"{{media_url}}\",\n      \"alt_text\": \"sample\",\n      \"position\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/products/{id} — Full product for editing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Full product for editing\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/products/{id} — Replace product fields; use child endpoints for variants/images",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Replace product fields; use child endpoints for variants/images\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"sku\": \"SAMPLE-001\",\n  \"name\": \"Sample item\",\n  \"name_en\": \"Sample item\",\n  \"slug\": \"sample-item\",\n  \"description\": \"sample\",\n  \"base_price_kip\": 1,\n  \"status\": \"ACTIVE\",\n  \"initial_stock\": 1,\n  \"variants\": [\n    {\n      \"sku\": \"SAMPLE-001\",\n      \"attributes\": {},\n      \"price_override_kip\": 1,\n      \"stock_on_hand\": 1,\n      \"position\": 1\n    }\n  ],\n  \"images\": [\n    {\n      \"url\": \"{{media_url}}\",\n      \"alt_text\": \"sample\",\n      \"position\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/products/{id} — Soft-delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Soft-delete product\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/products/{id}/restore — Restore product visibility",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Restore product visibility\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/restore",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "restore"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/products/{id}/variants — List up to 100 product variants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List up to 100 product variants\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "variants"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/products/{id}/variants — Add variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Add variant\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "variants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"SAMPLE-001\",\n  \"attributes\": {},\n  \"price_override_kip\": 1,\n  \"stock_on_hand\": 1,\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/products/{id}/variants/{variant} — Replace variant fields; cannot reduce below reserved stock",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Replace variant fields; cannot reduce below reserved stock\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants/{{variant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "variants",
+                "{{variant_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"SAMPLE-001\",\n  \"attributes\": {},\n  \"price_override_kip\": 1,\n  \"stock_on_hand\": 1,\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/products/{id}/variants/{variant} — Delete unreferenced non-last variant",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Delete unreferenced non-last variant\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants/{{variant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "variants",
+                "{{variant_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/products/{id}/images — Attach uploaded product image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Attach uploaded product image\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "images"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"{{media_url}}\",\n  \"alt_text\": \"sample\",\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/products/{id}/images/{image} — Detach image and remove unreferenced file",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Detach image and remove unreferenced file\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/images/{{image_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "images",
+                "{{image_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/products/{id}/variants/reorder — Reorder distinct members within group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "variants",
+                "reorder"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{variant_id}}\"\n  ],\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/products/{id}/images/reorder — Reorder distinct members within group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/images/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "products",
+                "{{product_id}}",
+                "images",
+                "reorder"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{image_id}}\"\n  ],\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Categories",
+      "item": [
+        {
+          "name": "GET /admin/categories — List categories (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List categories (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/categories — Create categories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create categories\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "categories"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample item\",\n  \"name_en\": \"Sample item\",\n  \"slug\": \"sample-item\",\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/categories/{id} — Replace categories fields",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Replace categories fields\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "categories",
+                "{{category_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample item\",\n  \"name_en\": \"Sample item\",\n  \"slug\": \"sample-item\",\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/categories/{id} — Delete categories subject to references",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Delete categories subject to references\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "categories",
+                "{{category_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/categories/reorder — Reorder distinct members within group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/categories/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "categories",
+                "reorder"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{category_id}}\"\n  ],\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Providers",
+      "item": [
+        {
+          "name": "GET /admin/providers — List providers (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List providers (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/providers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "providers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/providers — Create providers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create providers\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/providers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "providers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample item\",\n  \"shipping_fee_kip\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/providers/{id} — Replace providers fields",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Replace providers fields\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/providers/{{provider_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "providers",
+                "{{provider_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample item\",\n  \"shipping_fee_kip\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Branches",
+      "item": [
+        {
+          "name": "GET /admin/branches — List branches (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List branches (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/branches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "branches"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "provider_id",
+                  "value": "{{provider_id}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/branches — Create delivery branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create delivery branch\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/branches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "branches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider_id\": \"{{provider_id}}\",\n  \"province\": \"{{province}}\",\n  \"city\": \"{{city}}\",\n  \"name\": \"Sample item\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/branches/{id} — Delete branches subject to references",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Delete branches subject to references\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/branches/{{branch_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "branches",
+                "{{branch_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Hero Slides",
+      "item": [
+        {
+          "name": "GET /admin/hero-slides — List hero-slides (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List hero-slides (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/hero-slides",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "hero-slides"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/hero-slides — Create hero-slides",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create hero-slides\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/hero-slides",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "hero-slides"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"{{media_url}}\",\n  \"alt_text\": \"sample\",\n  \"heading\": \"sample\",\n  \"subheading\": \"sample\",\n  \"cta_label\": \"sample\",\n  \"cta_href\": \"/products\",\n  \"position\": 1,\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/hero-slides/{id} — Replace hero-slides fields",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Replace hero-slides fields\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/hero-slides/{{hero_slide_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "hero-slides",
+                "{{hero_slide_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"{{media_url}}\",\n  \"alt_text\": \"sample\",\n  \"heading\": \"sample\",\n  \"subheading\": \"sample\",\n  \"cta_label\": \"sample\",\n  \"cta_href\": \"/products\",\n  \"position\": 1,\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/hero-slides/{id} — Delete hero-slides subject to references",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Delete hero-slides subject to references\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/hero-slides/{{hero_slide_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "hero-slides",
+                "{{hero_slide_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/hero-slides/reorder — Reorder distinct members within group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/hero-slides/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "hero-slides",
+                "reorder"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{hero_slide_id}}\"\n  ],\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Promo Banners",
+      "item": [
+        {
+          "name": "GET /admin/promo-banners — List promo-banners (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List promo-banners (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/promo-banners",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "promo-banners"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/promo-banners — Create promo-banners",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create promo-banners\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/promo-banners",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "promo-banners"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"{{media_url}}\",\n  \"alt_text\": \"sample\",\n  \"heading\": \"sample\",\n  \"subheading\": \"sample\",\n  \"cta_label\": \"sample\",\n  \"cta_href\": \"/products\",\n  \"position\": 1,\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /admin/promo-banners/{id} — Replace promo-banners fields",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Replace promo-banners fields\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/promo-banners/{{promo_banner_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "promo-banners",
+                "{{promo_banner_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"{{media_url}}\",\n  \"alt_text\": \"sample\",\n  \"heading\": \"sample\",\n  \"subheading\": \"sample\",\n  \"cta_label\": \"sample\",\n  \"cta_href\": \"/products\",\n  \"position\": 1,\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /admin/promo-banners/{id} — Delete promo-banners subject to references",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Delete promo-banners subject to references\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/promo-banners/{{promo_banner_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "promo-banners",
+                "{{promo_banner_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/promo-banners/reorder — Reorder distinct members within group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/promo-banners/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "promo-banners",
+                "reorder"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{promo_banner_id}}\"\n  ],\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Orders",
+      "item": [
+        {
+          "name": "GET /admin/orders — List orders (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List orders (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "payment",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/orders/export — Export filtered orders as UTF-8 CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Export filtered orders as UTF-8 CSV\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/export",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "export"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "payment",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/orders/{bill} — Full staff bill, events and refunds",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Full staff bill, events and refunds\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "{{bill_number}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/orders/{bill}/mark-paid — Order mark-paid with audit/event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Order mark-paid with audit/event\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/mark-paid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "{{bill_number}}",
+                "mark-paid"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Staff action\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/orders/{bill}/mark-delivered — Order mark-delivered with audit/event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Order mark-delivered with audit/event\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/mark-delivered",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "{{bill_number}}",
+                "mark-delivered"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Staff action\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/orders/{bill}/cancel — Order cancel with audit/event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Order cancel with audit/event\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "{{bill_number}}",
+                "cancel"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Staff action\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/orders/{bill}/refunds — Request full online refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Request full online refund\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/refunds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "{{bill_number}}",
+                "refunds"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer requested refund\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Payment Attempts",
+      "item": [
+        {
+          "name": "GET /admin/payment-attempts — List payment-attempts (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List payment-attempts (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/payment-attempts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "payment-attempts"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order_id",
+                  "value": "{{bill_number}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Payment Events",
+      "item": [
+        {
+          "name": "GET /admin/payment-events — List payment-events (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List payment-events (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/payment-events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "payment-events"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Refunds",
+      "item": [
+        {
+          "name": "GET /admin/refunds — List refunds (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List refunds (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/refunds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "refunds"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order_id",
+                  "value": "{{bill_number}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/refunds/{id}/approve — Approve with named-staff dual control",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Approve with named-staff dual control\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/refunds/{{refund_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "refunds",
+                "{{refund_id}}",
+                "approve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/refunds/{id}/resolve — Resolve an independently verified unknown/manual refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Resolve an independently verified unknown/manual refund\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/refunds/{{refund_id}}/resolve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "refunds",
+                "{{refund_id}}",
+                "resolve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider_refund_bill_id\": \"{{provider_refund_bill_id}}\",\n  \"terminal_success\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Staff",
+      "item": [
+        {
+          "name": "GET /admin/staff — List staff (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List staff (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "role",
+                  "value": "OWNER",
+                  "disabled": true,
+                  "description": "enum: `[\"OWNER\", \"CATALOG\", \"FULFILMENT\", \"FINANCE\", \"SUPPORT\", \"AUDITOR\"]`"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/staff — Create named staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Create named staff\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{new_staff_email}}\",\n  \"name\": \"{{new_staff_name}}\",\n  \"role\": \"OWNER\",\n  \"password\": \"{{new_staff_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/staff/{id}/disable — Staff disable with audit and session rules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Staff disable with audit and session rules\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff/{{staff_id}}/disable",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff",
+                "{{staff_id}}",
+                "disable"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/staff/{id}/enable — Staff enable with audit and session rules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Staff enable with audit and session rules\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff/{{staff_id}}/enable",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff",
+                "{{staff_id}}",
+                "enable"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/staff/{id}/reset-password — Staff reset-password with audit and session rules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Staff reset-password with audit and session rules\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff/{{staff_id}}/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff",
+                "{{staff_id}}",
+                "reset-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{new_staff_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Sms Logs",
+      "item": [
+        {
+          "name": "GET /admin/sms-logs — List sms-logs (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List sms-logs (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/sms-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "sms-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Outbox",
+      "item": [
+        {
+          "name": "GET /admin/outbox — List outbox (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List outbox (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/outbox",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "outbox"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Audit Logs",
+      "item": [
+        {
+          "name": "GET /admin/audit-logs — List audit-logs (role permission enforced)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "List audit-logs (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/audit-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "audit-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "default: `1`; minimum: `1`"
+                },
+                {
+                  "key": "limit",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "default: `30`; minimum: `1`; maximum: `100`"
+                },
+                {
+                  "key": "q",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": "maxLength: `200`"
+                },
+                {
+                  "key": "sort",
+                  "value": "sample",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "disabled": true,
+                  "description": "enum: `[\"asc\", \"desc\"]`; default: `\"desc\"`"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff / Uploads",
+      "item": [
+        {
+          "name": "POST /admin/uploads — Upload validated WebP; content kind requires 3:1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-ShopNext-CSRF",
+                "value": "1",
+                "description": "Required on all browser mutations."
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Upload validated WebP; content kind requires 3:1\n\nAuthentication: Staff cookie.",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/uploads",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "kind",
+                  "value": "product",
+                  "disabled": true,
+                  "description": "enum: `[\"product\", \"content\"]`; default: `\"product\"`"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a WebP file, maximum 5 MiB."
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Media",
+      "item": [
+        {
+          "name": "GET /media/{filename} — Read persisted WebP",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Read persisted WebP\n\nAuthentication: Public.",
+            "url": {
+              "raw": "{{base_url}}/media/{{filename}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "media",
+                "{{filename}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

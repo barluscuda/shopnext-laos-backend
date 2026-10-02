@@ -2,7 +2,33 @@
 
 ## Unreleased
 
-Updated: `2026-10-02 11:02:13` (Asia/Vientiane, UTC+07:00).
+Updated: `2026-10-02 16:56:49` (Asia/Vientiane, UTC+07:00).
+
+Base commit: `fd842a9d4c358cbe7a2dbc2108e4ea6a04e16d18`.
+
+### Added
+
+- Human-readable API guide covering OTP and cookie identity, checkout, staff
+  permissions, uploads, callbacks, error handling, and Postman setup.
+- Generated endpoint reference and Postman v2.1 collection covering all 84
+  OpenAPI operations, with request examples, variables, and CSRF headers.
+- Standard-library Python generator with a `--check` mode to detect drift
+  between OpenAPI and the generated documentation.
+
+### Changed
+
+- README and feature parity documentation now link the API documentation and
+  describe how to regenerate and verify it.
+
+### Verification
+
+- Postman collection validated against the official v2.1 JSON schema.
+- Checked all 84 operations, variables, CSRF headers, request fields, media
+  paths, and documentation links; regeneration and `git diff --check` passed.
+
+## Commit documentation rules — `fd842a9`
+
+Recorded: `2026-10-02 11:02:13` (Asia/Vientiane, UTC+07:00).
 
 Base commit: `cc8c085`.
 
