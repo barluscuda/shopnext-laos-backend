@@ -43,6 +43,13 @@ func (unrestricted) Check(context.Context, string, string, int, time.Duration) (
 }
 func (unrestricted) Ping(context.Context) error { return nil }
 
+type adminLogin struct {
+	AccessToken string       `json:"access_token"`
+	TokenType   string       `json:"token_type"`
+	ExpiresIn   int          `json:"expires_in"`
+	Actor       domain.Actor `json:"actor"`
+}
+
 type harness struct {
 	s       *application.Service
 	db      *postgres.Store
@@ -82,7 +89,7 @@ func setup(t *testing.T) *harness {
 	t.Cleanup(func() { _ = limiter.Close() })
 	must(t, limiter.Client.FlushDB(ctx).Err())
 	cfg := platform.Config{Env: "test", UploadDir: t.TempDir(), AllowedOrigins: []string{"http://localhost:3000"}, Hold: 15 * time.Minute, MaintenanceSecret: strings.Repeat("m", 32), WebhookSecret: strings.Repeat("w", 32), WebhookHeader: "x-phajay-signature"}
-	s := application.New(db, limiter, providers.NewPayment("", "", true), providers.NewSMS("", "", "", true, true), &media.Storage{Dir: cfg.UploadDir}, application.Options{Hold: cfg.Hold, TrustDeviceSecret: strings.Repeat("t", 32)})
+	s := application.New(db, limiter, providers.NewPayment("", "", true), providers.NewSMS("", "", "", true, true), &media.Storage{Dir: cfg.UploadDir}, application.Options{AdminJWTSecret: strings.Repeat("a", 32), Hold: cfg.Hold, TrustDeviceSecret: strings.Repeat("t", 32)})
 	r, err := api.New(s, cfg, zap.NewNop())
 	must(t, err)
 	return &harness{s, db, limiter, r, cfg}
@@ -132,7 +139,7 @@ func request(t *testing.T, h *harness, method, path string, body any, cookies ..
 	req.Header.Set("Origin", "http://localhost:3000")
 	req.Header.Set("User-Agent", "ShopNext-test-device")
 	for _, c := range cookies {
-		if c.Name == api.PhoneKeyHeader || c.Name == api.TrustDeviceHeader {
+		if c.Name == api.PhoneKeyHeader || c.Name == api.TrustDeviceHeader || c.Name == "Authorization" {
 			req.Header.Set(c.Name, c.Value)
 		} else {
 			req.AddCookie(c)
@@ -174,10 +181,11 @@ func TestHTTPShoppingAndAdmin(t *testing.T) {
 	must(t, err)
 	w := request(t, h, "POST", "/api/v1/admin/auth/login", map[string]any{"email": staff.Email, "password": "correct-password-123"})
 	expect(t, w, 200)
-	staffCookie := w.Result().Cookies()[0]
-	if !staffCookie.HttpOnly || staffCookie.MaxAge != 28800 {
-		t.Fatal("staff cookie policy")
+	login := data[adminLogin](t, w)
+	if len(w.Result().Cookies()) != 0 || login.TokenType != "Bearer" || login.ExpiresIn != 28800 || login.Actor.ID != staff.ID || len(strings.Split(login.AccessToken, ".")) != 3 {
+		t.Fatal("admin JWT login contract")
 	}
+	staffBearer := &http.Cookie{Name: "Authorization", Value: "Bearer " + login.AccessToken}
 	for _, path := range []string{"/api/v1/health/live", "/api/v1/health/ready", "/api/v1/products", "/api/v1/products/product", "/api/v1/products/product/related", "/api/v1/categories", "/api/v1/content", "/api/v1/delivery-options", "/api/v1/geography", "/api/v1/payment-methods"} {
 		expect(t, request(t, h, "GET", path, nil), 200)
 	}
@@ -217,13 +225,13 @@ func TestHTTPShoppingAndAdmin(t *testing.T) {
 	expect(t, request(t, h, "GET", "/api/v1/bills/search?q="+bill.BillNumber, nil), 200)
 	trust := &http.Cookie{Name: api.TrustDeviceHeader, Value: private.TrustDeviceKey}
 	expect(t, request(t, h, "POST", "/api/v1/bills/"+bill.BillNumber+"/simulate-payment", nil, trust), 200)
-	expect(t, request(t, h, "GET", "/api/v1/admin/orders/"+bill.BillNumber, nil, staffCookie), 200)
-	expect(t, request(t, h, "POST", "/api/v1/admin/orders/"+bill.BillNumber+"/mark-delivered", map[string]string{"note": "collected"}, staffCookie), 200)
-	expect(t, request(t, h, "GET", "/api/v1/admin/orders/export", nil, staffCookie), 200)
+	expect(t, request(t, h, "GET", "/api/v1/admin/orders/"+bill.BillNumber, nil, staffBearer), 200)
+	expect(t, request(t, h, "POST", "/api/v1/admin/orders/"+bill.BillNumber+"/mark-delivered", map[string]string{"note": "collected"}, staffBearer), 200)
+	expect(t, request(t, h, "GET", "/api/v1/admin/orders/export", nil, staffBearer), 200)
 	for _, path := range []string{"dashboard", "orders", "products", "categories", "providers", "branches", "hero-slides", "promo-banners", "refunds", "staff", "audit-logs", "sms-logs", "outbox", "payment-events", "payment-attempts"} {
-		expect(t, request(t, h, "GET", "/api/v1/admin/"+path, nil, staffCookie), 200)
+		expect(t, request(t, h, "GET", "/api/v1/admin/"+path, nil, staffBearer), 200)
 	}
-	w = request(t, h, "GET", "/api/v1/admin/products/"+p.ID, nil, staffCookie)
+	w = request(t, h, "GET", "/api/v1/admin/products/"+p.ID, nil, staffBearer)
 	expect(t, w, 200)
 	worker := application.Worker{Service: h.s}
 	_, err = worker.DrainOutbox(ctx)
@@ -236,8 +244,8 @@ func TestHTTPShoppingAndAdmin(t *testing.T) {
 	if verified, err := h.s.VerifiedPhone(ctx, pc.Value); err != nil || verified != "" {
 		t.Fatal("token not revoked")
 	}
-	expect(t, request(t, h, "POST", "/api/v1/admin/auth/logout", nil, staffCookie), 200)
-	expect(t, request(t, h, "GET", "/api/v1/admin/orders", nil, staffCookie), 401)
+	expect(t, request(t, h, "POST", "/api/v1/admin/auth/logout", nil, staffBearer), 200)
+	expect(t, request(t, h, "GET", "/api/v1/admin/orders", nil, staffBearer), 401)
 }
 
 func TestCheckoutAtomicIdempotencyAndStock(t *testing.T) {
@@ -469,7 +477,7 @@ func TestStaffPermissionsRevocationAndCatalogEditing(t *testing.T) {
 	must(t, err)
 	token, actor, err := h.s.Login(ctx, auditor.Email, "correct-password", "ip")
 	must(t, err)
-	ac := &http.Cookie{Name: api.StaffCookie, Value: token}
+	ac := &http.Cookie{Name: "Authorization", Value: "Bearer " + token}
 	expect(t, request(t, h, "GET", "/api/v1/admin/orders/export", nil, ac), 200)
 	expect(t, request(t, h, "GET", "/api/v1/admin/products", nil, ac), 403)
 	_, err = h.s.SaveVariant(ctx, actor, p.ID, v.ID, application.VariantInput{SKU: v.SKU, StockOnHand: 5}, "ip")

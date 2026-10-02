@@ -5,7 +5,7 @@
 Set `APP_ENV=production`, explicit HTTPS `ALLOWED_ORIGINS`, production
 `DATABASE_URL`/`REDIS_URL`, `PAYMENT_PROVIDER=phajay`, `SMS_PROVIDER=wenova`,
 merchant `PHAJAY_SECRET_KEY`, `PHAJAY_WEBHOOK_SECRET`, `WENOVA_TOKEN`, and a
-32-character-or-longer `CRON_SECRET`. Set provider base URLs and sender ID to
+32-character-or-longer `CRON_SECRET` and independent `ADMIN_JWT_SECRET`. Set provider base URLs and sender ID to
 merchant-approved values. Terminate TLS at a reverse proxy. Set `TRUSTED_PROXIES`
 only to actual proxy addresses/CIDRs; otherwise client-supplied forwarding
 headers are ignored. Never expose PostgreSQL or Redis publicly.
@@ -85,14 +85,19 @@ five failed verification attempts. Only the newest OTP can be used. Phone
 verification header keys are opaque and hashed in PostgreSQL, with a three-day
 TTL and five-use limit. Customer access does not use backend cookies. Order-only
 trusted-device JWTs expire after 30 days and check stored token hashes and the
-User-Agent on every use; configure TRUST_DEVICE_SECRET in production. Staff cookies have an eight-hour TTL;
+User-Agent on every use; configure TRUST_DEVICE_SECRET in production. Admin bearer JWTs have an eight-hour TTL;
 password reset and disabling revoke sessions. Passwords use NeoShop-compatible
 scrypt. Login, mutation and audit history never stores plaintext credentials.
 
 Optional `ADMIN_PASSWORD_HASH` (raw/base64 NeoShop scrypt format) plus
-`ADMIN_SESSION_SECRET` enables the legacy signed shared-owner cookie. Prefer
-named staff: the shared identity cannot provide attribution or dual-control
-separation and its sessions cannot be individually revoked (rotate the secret).
+`ADMIN_SESSION_SECRET` enables legacy shared-owner login, which now issues a
+revocable JWT. Its signing key binds ADMIN_JWT_SECRET and ADMIN_SESSION_SECRET;
+rotating either invalidates legacy tokens. Prefer named staff for attribution
+and dual-control separation. Migration 00003 revokes old cookie sessions and
+allows legacy JWT sessions in PostgreSQL. Deploy it before the API, then have
+staff log in again. Admin clients must read data.access_token and send it in
+Authorization: Bearer headers. Rotating ADMIN_JWT_SECRET invalidates all admin
+JWTs; tokens cannot authorize customer operations.
 
 Public bill-number lookup returns basic status, time, total and pickup readiness,
 including the pickup code when staff has assigned it. Full recipient, delivery,

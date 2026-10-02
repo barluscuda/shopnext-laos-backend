@@ -2,8 +2,6 @@ package application
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
@@ -11,7 +9,6 @@ import (
 	"fmt"
 	"golang.org/x/crypto/scrypt"
 	"shopnext-laos/internal/domain"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -196,11 +193,15 @@ func (s *Service) Login(ctx context.Context, email, password, ip string) (string
 	var token string
 	if !strings.Contains(email, "@") && s.Options.LegacyPasswordHash != "" && VerifyPassword(password, s.Options.LegacyPasswordHash) {
 		actor = domain.Actor{ID: "legacy", Email: "admin@local", Name: "Admin", Role: "OWNER", Legacy: true}
-		body := fmt.Sprintf("legacy.%d.%s", time.Now().Add(8*time.Hour).Unix(), domain.Token(16))
-		mac := hmac.New(sha256.New, []byte(s.Options.LegacySessionSecret))
-		_, _ = mac.Write([]byte(body))
-		token = body + "." + hex.EncodeToString(mac.Sum(nil))
-		if err := s.Audit(ctx, s.Store, actor, "staff.login", "staff", actor.ID, "", ip); err != nil {
+		var err error
+		err = s.Store.Transaction(ctx, func(tx Store) error {
+			token, err = s.createAdminSession(ctx, tx, actor)
+			if err != nil {
+				return err
+			}
+			return s.Audit(ctx, tx, actor, "staff.login", "staff", actor.ID, "", ip)
+		})
+		if err != nil {
 			return "", domain.Actor{}, err
 		}
 		return token, actor, nil
@@ -217,7 +218,6 @@ func (s *Service) Login(ctx context.Context, email, password, ip string) (string
 		return "", actor, domain.Fail("INVALID_CREDENTIALS", 401)
 	}
 	actor = domain.Actor{ID: user.ID, Email: user.Email, Name: user.Name, Role: user.Role}
-	token = domain.Token(32)
 	err = s.Store.Transaction(ctx, func(tx Store) error {
 		current, err := findOne[domain.Staff](ctx, tx, StaffUsers, locked(byID(user.ID)))
 		if err != nil {
@@ -226,42 +226,56 @@ func (s *Service) Login(ctx context.Context, email, password, ip string) (string
 		if current.DisabledAt != nil || current.PasswordHash != user.PasswordHash {
 			return domain.Fail("INVALID_CREDENTIALS", 401)
 		}
-		if err := tx.Insert(ctx, Sessions, &domain.Session{Base: domain.NewBase(), UserID: user.ID, TokenHash: domain.Hash(token), ExpiresAt: time.Now().Add(8 * time.Hour)}); err != nil {
+		actor = domain.Actor{ID: current.ID, Email: current.Email, Name: current.Name, Role: current.Role}
+		token, err = s.createAdminSession(ctx, tx, actor)
+		if err != nil {
 			return err
 		}
 		return s.Audit(ctx, tx, actor, "staff.login", "staff", user.ID, "", ip)
 	})
 	return token, actor, err
 }
+
+// createAdminSession persists a revocable session without storing the JWT.
+func (s *Service) createAdminSession(ctx context.Context, tx Store, actor domain.Actor) (string, error) {
+	now := time.Now().UTC().Truncate(time.Second)
+	session := domain.Session{Base: domain.NewBase(), Legacy: actor.Legacy, ExpiresAt: now.Add(AdminTokenLifetime)}
+	if !actor.Legacy {
+		session.UserID = &actor.ID
+	}
+	token, err := s.signAdmin(adminClaims{Issuer: adminJWTIssuer, Audience: adminJWTAudience, Subject: actor.ID, ID: session.ID, IssuedAt: now.Unix(), ExpiresAt: session.ExpiresAt.Unix(), Legacy: actor.Legacy})
+	if err != nil {
+		return "", err
+	}
+	session.TokenHash = domain.Hash(token)
+	return token, tx.Insert(ctx, Sessions, &session)
+}
+
 func (s *Service) Actor(ctx context.Context, token string) (domain.Actor, error) {
-	if token == "" {
+	claims, valid := s.parseAdmin(token)
+	if !valid {
 		return domain.Actor{}, nil
 	}
-	if strings.HasPrefix(token, "legacy.") {
-		p := strings.Split(token, ".")
-		if len(p) != 4 || s.Options.LegacySessionSecret == "" {
-			return domain.Actor{}, nil
-		}
-		exp, err := strconv.ParseInt(p[1], 10, 64)
-		sig, decodeErr := hex.DecodeString(p[3])
-		if err != nil || decodeErr != nil || exp <= time.Now().Unix() {
-			return domain.Actor{}, nil
-		}
-		mac := hmac.New(sha256.New, []byte(s.Options.LegacySessionSecret))
-		_, _ = mac.Write([]byte(strings.Join(p[:3], ".")))
-		if !hmac.Equal(sig, mac.Sum(nil)) {
-			return domain.Actor{}, nil
-		}
-		return domain.Actor{ID: "legacy", Email: "admin@local", Name: "Admin", Role: "OWNER", Legacy: true}, nil
-	}
-	session, err := findOne[domain.Session](ctx, s.Store, Sessions, Query{Eq: map[string]any{"token_hash": domain.Hash(token), "revoked_at": nil}, GT: map[string]any{"expires_at": time.Now()}})
+	session, err := findOne[domain.Session](ctx, s.Store, Sessions, Query{Eq: map[string]any{"id": claims.ID, "token_hash": domain.Hash(token), "revoked_at": nil}, GT: map[string]any{"expires_at": time.Now()}})
 	if errors.Is(err, domain.ErrNotFound) {
 		return domain.Actor{}, nil
 	}
 	if err != nil {
 		return domain.Actor{}, err
 	}
-	user, err := findOne[domain.Staff](ctx, s.Store, StaffUsers, Query{Eq: map[string]any{"id": session.UserID, "disabled_at": nil}})
+	if session.Legacy != claims.Legacy {
+		return domain.Actor{}, nil
+	}
+	if claims.Legacy {
+		if session.UserID != nil {
+			return domain.Actor{}, nil
+		}
+		return domain.Actor{ID: "legacy", Email: "admin@local", Name: "Admin", Role: "OWNER", Legacy: true}, nil
+	}
+	if session.UserID == nil || *session.UserID != claims.Subject {
+		return domain.Actor{}, nil
+	}
+	user, err := findOne[domain.Staff](ctx, s.Store, StaffUsers, Query{Eq: map[string]any{"id": claims.Subject, "disabled_at": nil}})
 	if errors.Is(err, domain.ErrNotFound) {
 		return domain.Actor{}, nil
 	}

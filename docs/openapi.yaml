@@ -3,7 +3,7 @@
   "info": {
     "title": "ShopNext Laos",
     "version": "1.0.0",
-    "description": "Developed by barluscuda. Account-free shopping; integer LAK money. Customer OTP/trusted-device header keys, staff cookie authentication, exact-origin CORS and CSRF header for mutations. See API guide for Next.js payment callbacks."
+    "description": "Developed by barluscuda. Account-free shopping; integer LAK money. Customer OTP/trusted-device header keys, admin bearer JWT authentication, exact-origin CORS and CSRF header for mutations. See API guide for Next.js payment callbacks."
   },
   "servers": [
     {
@@ -1791,7 +1791,7 @@
                   "additionalProperties": false,
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/Actor"
+                      "$ref": "#/components/schemas/AdminLogin"
                     }
                   },
                   "required": [
@@ -1838,7 +1838,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Returns an eight-hour access_token, token_type, expires_in (seconds), and actor in data. Send Authorization: Bearer <access_token> on protected admin requests. No cookies are issued. Requires X-ShopNext-CSRF: 1."
       }
     },
     "/admin/auth/session": {
@@ -1850,7 +1851,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "responses": {
@@ -1906,13 +1907,13 @@
     "/admin/auth/logout": {
       "post": {
         "operationId": "post__admin_auth_logout",
-        "summary": "Revoke staff cookie",
+        "summary": "Revoke the current admin JWT session",
         "tags": [
           "Staff"
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -1974,7 +1975,8 @@
           "503": {
             "$ref": "#/components/responses/Error503"
           }
-        }
+        },
+        "description": "Requires a valid admin bearer JWT. Revokes its PostgreSQL session immediately, including legacy-owner sessions."
       }
     },
     "/admin/dashboard": {
@@ -1986,7 +1988,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "responses": {
@@ -2048,7 +2050,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2199,7 +2201,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2283,7 +2285,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2404,7 +2406,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2488,7 +2490,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2609,7 +2611,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2693,7 +2695,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2822,7 +2824,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -2906,7 +2908,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3027,7 +3029,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3111,7 +3113,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3232,7 +3234,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3316,7 +3318,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3455,7 +3457,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3594,7 +3596,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3725,7 +3727,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -3864,7 +3866,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4001,7 +4003,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4085,7 +4087,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4208,7 +4210,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4339,7 +4341,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4462,7 +4464,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4541,7 +4543,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4613,7 +4615,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4705,7 +4707,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4797,7 +4799,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4889,7 +4891,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -4981,7 +4983,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5063,7 +5065,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5155,7 +5157,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5225,7 +5227,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5315,7 +5317,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5397,7 +5399,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5479,7 +5481,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5566,7 +5568,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5658,7 +5660,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5756,7 +5758,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5846,7 +5848,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -5938,7 +5940,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6028,7 +6030,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6118,7 +6120,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6200,7 +6202,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6292,7 +6294,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6382,7 +6384,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6464,7 +6466,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6554,7 +6556,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6636,7 +6638,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6718,7 +6720,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6802,7 +6804,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6886,7 +6888,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -6970,7 +6972,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -7062,7 +7064,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -7154,7 +7156,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -7236,7 +7238,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -7318,7 +7320,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -7410,7 +7412,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -7685,7 +7687,7 @@
         ],
         "security": [
           {
-            "StaffCookie": []
+            "AdminBearer": []
           }
         ],
         "parameters": [
@@ -10048,13 +10050,41 @@
           "paid_at",
           "total_kip"
         ]
+      },
+      "AdminLogin": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "actor"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Signed HS256 JWT; keep private."
+          },
+          "token_type": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "const": 28800
+          },
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          }
+        }
       }
     },
     "securitySchemes": {
-      "StaffCookie": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "shopnext_staff"
+      "AdminBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Eight-hour HS256 admin access token returned by login. Sessions are revocable in PostgreSQL."
       },
       "WebhookSignature": {
         "type": "apiKey",

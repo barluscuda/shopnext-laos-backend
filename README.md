@@ -58,7 +58,7 @@ Start with the [human-readable API guide](docs/api.md) and
 JSON uses snake_case and `{ "data": ... }`; errors contain
 `error.code`, `error.message` and `request_id`. Lists use `pagination`.
 Every mutation requires `X-ShopNext-CSRF: 1`, including login, OTP,
-uploads and logout. Customers use header keys; staff use HttpOnly cookies.
+uploads and logout. Customers use header keys; staff use revocable bearer JWTs.
 Origins must exactly match `ALLOWED_ORIGINS` (space-separated).
 
 Shopping sequence:

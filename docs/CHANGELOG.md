@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+Updated: `2026-10-03 02:03:23` (Asia/Vientiane, UTC+07:00).
+
+Base commit: `aadca9ce822809630f8fa9a8d389d9d5586bc571`.
+
+### Changed
+
+- Replaced staff cookies with eight-hour admin bearer JWTs backed by revocable
+  PostgreSQL sessions, including legacy-owner sessions; added the required
+  signing secret configuration and migration `00003_admin_jwt.sql`.
+- Updated the API contract, generated reference, Postman collection, feature
+  parity, operations guide and README for bearer authentication.
+
+### Verification
+
+- `git diff --check` passed. Tests were not run for this commit.
+
 Updated: `2026-10-02 18:28:19` (Asia/Vientiane, UTC+07:00).
 
 Base commit: `41206353dff2660a3bd1e766ada521b5b915641e`.

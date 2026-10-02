@@ -18,7 +18,7 @@ No customer accounts, coupons or wishlist were introduced.
 | Payment attempts and PhaJay callbacks | Six banks, retry/supersession, expiry, authentication, canonical dedupe, amount/reference checks, early callback replay, dev simulation | Mock provider contracts, payment/expiry/early callback tests |
 | `lib/order-transitions.ts`, staff order actions | Mark paid/delivered/cancel and manually assign pickup code with events, inventory consistency and permissions | Delivery/payment/cancellation/expiry integration tests |
 | `lib/refunds.ts`, refund adapters | Full refunds, request/dual approval, unknown-safe submission, polling, manual resolution, 24h deadline | Dual-control/refund integration; mock gateway tests |
-| `lib/staff-*`, legacy admin identity | Six roles, named sessions, password compatibility, bootstrap/create, disable/enable/reset/revoke, optional legacy owner | Permission/session/password tests |
+| `lib/staff-*`, legacy admin identity | Six roles, eight-hour admin bearer JWTs, PostgreSQL session revocation (including legacy owner), password compatibility, bootstrap/create, disable/enable/reset/revoke | Permission/JWT/session/password tests |
 | Dashboard/order export/admin lists | Paid revenue, 14-day item/revenue trend, statuses, low stock, recent orders; paginated filters; UTF-8 CSV | HTTP reporting/export and API documentation coverage |
 | Audit, SMS history/outbox, Wenova | Transactional audit/notifications, direct OTP SMS, leased outbox, retry/dead-letter/breaker, redacted OTP logs; signed Next.js payment callbacks with durable retries | HTTP outbox and mock Wenova tests |
 | Cron reservation release/idempotency cleanup | Continuous worker + secret-protected expiry hook | Expiry, worker and cleanup tests |

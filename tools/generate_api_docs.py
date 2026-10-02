@@ -14,7 +14,7 @@ METHODS = {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}
 VARIABLES = {
     'base_url': 'http://localhost:8080', 'phone': '', 'otp_code': '',
     'phone_verification_key': '', 'trust_device_key': '', 'user_agent': 'ShopNext-Postman-device', 'pickup_code': '',
-    'staff_email': '', 'staff_password': '', 'new_staff_password': '',
+    'admin_access_token': '', 'staff_email': '', 'staff_password': '', 'new_staff_password': '',
     'new_staff_email': '', 'new_staff_name': 'Test staff',
     'product_slug': 'sample-product', 'product_id': '', 'variant_id': '',
     'image_id': '', 'category_id': '', 'provider_id': '', 'branch_id': '',
@@ -151,7 +151,7 @@ def auth_label(operation):
     security = operation.get('security', SPEC.get('security', []))
     if not security:
         return 'Public'
-    labels = {'PhoneVerificationKey': 'Phone verification header key', 'TrustDeviceKey': 'Order trusted-device header key', 'StaffCookie': 'Staff cookie',
+    labels = {'PhoneVerificationKey': 'Phone verification header key', 'TrustDeviceKey': 'Order trusted-device header key', 'AdminBearer': 'Admin bearer JWT',
               'WebhookSignature': 'Webhook HMAC signature', 'MaintenanceBearer': 'Maintenance bearer secret'}
     return ' or '.join(' + '.join(labels[k] for k in s) if s else 'public (owner data requires verified phone)' for s in security)
 
@@ -215,6 +215,8 @@ def generate():
                 request['url']['query'] = query
             if active_query:
                 request['url']['raw'] += '?' + '&'.join(p['key'] + '=' + p['value'] for p in active_query)
+            if any('AdminBearer' in scheme for scheme in op.get('security', [])):
+                request['auth'] = {'type': 'bearer', 'bearer': [{'key': 'token', 'value': '{{admin_access_token}}', 'type': 'string'}]}
             if path == '/maintenance/release-expired':
                 request['auth'] = {'type': 'bearer', 'bearer': [{'key': 'token', 'value': '{{maintenance_secret}}', 'type': 'string'}]}
             if path == '/webhooks/phajay':
@@ -265,7 +267,7 @@ def generate():
             md += ['```json', json.dumps(schema, indent=2, ensure_ascii=False), '```', '']
     collection = {'info': {'name': 'ShopNext Laos API',
         'schema': 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
-        'description': 'Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and use the cookie jar for staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged.'},
+        'description': 'Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and copy the admin login access_token into a private admin_access_token variable. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged.'},
         'variable': [{'key': k, 'value': v, 'type': 'string'} for k, v in VARIABLES.items()],
         'item': [{'name': name, 'item': items} for name, items in folders.items()]}
     return {'docs/api-reference.md': '\n'.join(md),

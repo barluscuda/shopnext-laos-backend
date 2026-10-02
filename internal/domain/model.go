@@ -283,7 +283,8 @@ type Staff struct {
 }
 type Session struct {
 	Base
-	UserID    string     `json:"user_id"`
+	UserID    *string    `json:"user_id"`
+	Legacy    bool       `json:"legacy"`
 	TokenHash string     `json:"-"`
 	ExpiresAt time.Time  `json:"expires_at"`
 	RevokedAt *time.Time `json:"revoked_at"`

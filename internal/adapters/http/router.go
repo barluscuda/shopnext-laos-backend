@@ -25,7 +25,6 @@ import (
 
 const PhoneKeyHeader = "X-Phone-Verification-Key"
 const TrustDeviceHeader = "X-Trust-Device-Key"
-const StaffCookie = "shopnext_staff"
 
 type Handler struct {
 	Service *application.Service
@@ -94,9 +93,12 @@ func decode(c *gin.Context, out any) error {
 	}
 	return nil
 }
-func cookie(c *gin.Context, name string) string { v, _ := c.Cookie(name); return v }
-func (h *Handler) setCookie(c *gin.Context, name, value string, age int) {
-	http.SetCookie(c.Writer, &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: age, HttpOnly: true, Secure: h.Config.Env == "production", SameSite: http.SameSiteLaxMode})
+func staffToken(c *gin.Context) string {
+	parts := strings.Fields(c.GetHeader("Authorization"))
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return ""
+	}
+	return parts[1]
 }
 func (h *Handler) verified(c *gin.Context) (string, error) {
 	return h.Service.VerifiedPhone(c.Request.Context(), c.GetHeader(PhoneKeyHeader))
@@ -138,7 +140,7 @@ func (h *Handler) middleware(c *gin.Context) {
 		}
 		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Idempotency-Key, X-ShopNext-CSRF, X-Phone-Verification-Key, X-Trust-Device-Key")
+		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, X-ShopNext-CSRF, X-Phone-Verification-Key, X-Trust-Device-Key")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Expose-Headers", "X-Request-ID, Retry-After")
 	}
@@ -168,7 +170,7 @@ func (h *Handler) middleware(c *gin.Context) {
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBody)
 	if strings.HasPrefix(c.Request.URL.Path, "/api/v1/admin") {
-		a, err := h.Service.Actor(c.Request.Context(), cookie(c, StaffCookie))
+		a, err := h.Service.Actor(c.Request.Context(), staffToken(c))
 		if err != nil {
 			h.failure(c, err)
 			return
@@ -388,13 +390,11 @@ func (h *Handler) routes() {
 			h.failure(c, err)
 			return
 		}
-		h.setCookie(c, StaffCookie, token, 8*3600)
-		h.send(c, a, nil)
+		h.send(c, gin.H{"access_token": token, "token_type": "Bearer", "expires_in": int(application.AdminTokenLifetime.Seconds()), "actor": a}, nil)
 	})
 	v.GET("/admin/auth/session", h.permission("orders.view"), func(c *gin.Context) { h.send(c, actor(c), nil) })
-	v.POST("/admin/auth/logout", func(c *gin.Context) {
-		err := h.Service.Logout(c.Request.Context(), cookie(c, StaffCookie))
-		h.setCookie(c, StaffCookie, "", -1)
+	v.POST("/admin/auth/logout", h.permission("orders.view"), func(c *gin.Context) {
+		err := h.Service.Logout(c.Request.Context(), staffToken(c))
 		h.send(c, gin.H{"logged_out": true}, err)
 	})
 	admin := v.Group("/admin")

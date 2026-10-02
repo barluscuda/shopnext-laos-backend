@@ -13,17 +13,17 @@ import (
 	"testing"
 )
 
-func ownerCookie(t *testing.T, h *harness) *http.Cookie {
+func ownerAuthorization(t *testing.T, h *harness) *http.Cookie {
 	t.Helper()
 	_, err := h.s.CreateStaff(ctx, domain.Actor{}, application.StaffInput{Email: owner.Email, Name: "Owner", Role: "OWNER", Password: "correct-password"}, true, "ip")
 	must(t, err)
 	w := request(t, h, "POST", "/api/v1/admin/auth/login", map[string]string{"email": owner.Email, "password": "correct-password"})
 	expect(t, w, 200)
-	return w.Result().Cookies()[0]
+	return &http.Cookie{Name: "Authorization", Value: "Bearer " + data[adminLogin](t, w).AccessToken}
 }
 func TestManagementCRUDAndReorder(t *testing.T) {
 	h := setup(t)
-	staff := ownerCookie(t, h)
+	staff := ownerAuthorization(t, h)
 	w := request(t, h, "POST", "/api/v1/admin/categories", application.CategoryInput{Name: "Home", NameEn: "Home", Slug: "home"}, staff)
 	expect(t, w, 200)
 	cat := data[domain.Category](t, w)
@@ -68,7 +68,7 @@ func TestManagementCRUDAndReorder(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/v1/admin/uploads?kind=content", &body)
 	req.Header.Set("Content-Type", form.FormDataContentType())
 	req.Header.Set("X-ShopNext-CSRF", "1")
-	req.AddCookie(staff)
+	req.Header.Set(staff.Name, staff.Value)
 	w = httptest.NewRecorder()
 	h.handler.ServeHTTP(w, req)
 	expect(t, w, 200)

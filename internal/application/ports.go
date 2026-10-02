@@ -112,6 +112,7 @@ type MediaStorage interface {
 	ValidateContentURL(string) bool
 }
 type Options struct {
+	AdminJWTSecret      string
 	Production          bool
 	Hold                time.Duration
 	LegacyPasswordHash  string

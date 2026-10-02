@@ -2,7 +2,7 @@
   "info": {
     "name": "ShopNext Laos API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and use the cookie jar for staff sessions. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged."
+    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and copy the admin login access_token into a private admin_access_token variable. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged."
   },
   "variable": [
     {
@@ -37,6 +37,11 @@
     },
     {
       "key": "pickup_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_access_token",
       "value": "",
       "type": "string"
     },
@@ -1064,7 +1069,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Log in named staff or optional legacy owner\n\nAuthentication: Public.",
+            "description": "Log in named staff or optional legacy owner\n\nAuthentication: Public.\n\nReturns an eight-hour access_token, token_type, expires_in (seconds), and actor in data. Send Authorization: Bearer <access_token> on protected admin requests. No cookies are issued. Requires X-ShopNext-CSRF: 1.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/auth/login",
               "host": [
@@ -1096,9 +1101,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Read staff identity\n\nAuthentication: Staff cookie.",
+            "description": "Read staff identity\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/auth/session",
               "host": [
@@ -1116,7 +1128,7 @@
           "response": []
         },
         {
-          "name": "POST /admin/auth/logout — Revoke staff cookie",
+          "name": "POST /admin/auth/logout — Revoke the current admin JWT session",
           "request": {
             "method": "POST",
             "header": [
@@ -1127,9 +1139,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Revoke staff cookie\n\nAuthentication: Staff cookie.",
+            "description": "Revoke the current admin JWT session\n\nAuthentication: Admin bearer JWT.\n\nRequires a valid admin bearer JWT. Revokes its PostgreSQL session immediately, including legacy-owner sessions.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/auth/logout",
               "host": [
@@ -1157,9 +1176,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Revenue, trends, statuses and low stock\n\nAuthentication: Staff cookie.",
+            "description": "Revenue, trends, statuses and low stock\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/dashboard",
               "host": [
@@ -1186,9 +1212,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List products (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List products (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products",
               "host": [
@@ -1270,9 +1303,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create product with initial variants/images\n\nAuthentication: Staff cookie.",
+            "description": "Create product with initial variants/images\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products",
               "host": [
@@ -1303,9 +1343,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Full product for editing\n\nAuthentication: Staff cookie.",
+            "description": "Full product for editing\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}",
               "host": [
@@ -1338,9 +1385,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Replace product fields; use child endpoints for variants/images\n\nAuthentication: Staff cookie.",
+            "description": "Replace product fields; use child endpoints for variants/images\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}",
               "host": [
@@ -1378,9 +1432,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Soft-delete product\n\nAuthentication: Staff cookie.",
+            "description": "Soft-delete product\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}",
               "host": [
@@ -1409,9 +1470,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Restore product visibility\n\nAuthentication: Staff cookie.",
+            "description": "Restore product visibility\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/restore",
               "host": [
@@ -1435,9 +1503,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List up to 100 product variants\n\nAuthentication: Staff cookie.",
+            "description": "List up to 100 product variants\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants",
               "host": [
@@ -1471,9 +1546,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Add variant\n\nAuthentication: Staff cookie.",
+            "description": "Add variant\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants",
               "host": [
@@ -1516,9 +1598,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Replace variant fields; cannot reduce below reserved stock\n\nAuthentication: Staff cookie.",
+            "description": "Replace variant fields; cannot reduce below reserved stock\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants/{{variant_id}}",
               "host": [
@@ -1558,9 +1647,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Delete unreferenced non-last variant\n\nAuthentication: Staff cookie.",
+            "description": "Delete unreferenced non-last variant\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants/{{variant_id}}",
               "host": [
@@ -1595,9 +1691,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Attach uploaded product image\n\nAuthentication: Staff cookie.",
+            "description": "Attach uploaded product image\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/images",
               "host": [
@@ -1636,9 +1739,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Detach image and remove unreferenced file\n\nAuthentication: Staff cookie.",
+            "description": "Detach image and remove unreferenced file\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/images/{{image_id}}",
               "host": [
@@ -1673,9 +1783,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "description": "Reorder distinct members within group\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/variants/reorder",
               "host": [
@@ -1719,9 +1836,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "description": "Reorder distinct members within group\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/products/{{product_id}}/images/reorder",
               "host": [
@@ -1760,9 +1884,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List categories (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List categories (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/categories",
               "host": [
@@ -1826,9 +1957,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create categories\n\nAuthentication: Staff cookie.",
+            "description": "Create categories\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/categories",
               "host": [
@@ -1869,9 +2007,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Replace categories fields\n\nAuthentication: Staff cookie.",
+            "description": "Replace categories fields\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}",
               "host": [
@@ -1909,9 +2054,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Delete categories subject to references\n\nAuthentication: Staff cookie.",
+            "description": "Delete categories subject to references\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/categories/{{category_id}}",
               "host": [
@@ -1944,9 +2096,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "description": "Reorder distinct members within group\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/categories/reorder",
               "host": [
@@ -1983,9 +2142,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List providers (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List providers (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/providers",
               "host": [
@@ -2049,9 +2215,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create providers\n\nAuthentication: Staff cookie.",
+            "description": "Create providers\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/providers",
               "host": [
@@ -2092,9 +2265,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Replace providers fields\n\nAuthentication: Staff cookie.",
+            "description": "Replace providers fields\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/providers/{{provider_id}}",
               "host": [
@@ -2131,9 +2311,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List branches (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List branches (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/branches",
               "host": [
@@ -2203,9 +2390,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create delivery branch\n\nAuthentication: Staff cookie.",
+            "description": "Create delivery branch\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/branches",
               "host": [
@@ -2242,9 +2436,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Delete branches subject to references\n\nAuthentication: Staff cookie.",
+            "description": "Delete branches subject to references\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/branches/{{branch_id}}",
               "host": [
@@ -2272,9 +2473,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List hero-slides (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List hero-slides (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/hero-slides",
               "host": [
@@ -2338,9 +2546,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create hero-slides\n\nAuthentication: Staff cookie.",
+            "description": "Create hero-slides\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/hero-slides",
               "host": [
@@ -2381,9 +2596,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Replace hero-slides fields\n\nAuthentication: Staff cookie.",
+            "description": "Replace hero-slides fields\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/hero-slides/{{hero_slide_id}}",
               "host": [
@@ -2421,9 +2643,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Delete hero-slides subject to references\n\nAuthentication: Staff cookie.",
+            "description": "Delete hero-slides subject to references\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/hero-slides/{{hero_slide_id}}",
               "host": [
@@ -2456,9 +2685,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "description": "Reorder distinct members within group\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/hero-slides/reorder",
               "host": [
@@ -2495,9 +2731,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List promo-banners (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List promo-banners (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/promo-banners",
               "host": [
@@ -2561,9 +2804,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create promo-banners\n\nAuthentication: Staff cookie.",
+            "description": "Create promo-banners\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/promo-banners",
               "host": [
@@ -2604,9 +2854,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Replace promo-banners fields\n\nAuthentication: Staff cookie.",
+            "description": "Replace promo-banners fields\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/promo-banners/{{promo_banner_id}}",
               "host": [
@@ -2644,9 +2901,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Delete promo-banners subject to references\n\nAuthentication: Staff cookie.",
+            "description": "Delete promo-banners subject to references\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/promo-banners/{{promo_banner_id}}",
               "host": [
@@ -2679,9 +2943,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Reorder distinct members within group\n\nAuthentication: Staff cookie.",
+            "description": "Reorder distinct members within group\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/promo-banners/reorder",
               "host": [
@@ -2718,9 +2989,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List orders (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List orders (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders",
               "host": [
@@ -2786,9 +3064,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Export filtered orders as UTF-8 CSV\n\nAuthentication: Staff cookie.",
+            "description": "Export filtered orders as UTF-8 CSV\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/export",
               "host": [
@@ -2831,9 +3116,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Full staff bill, events and refunds\n\nAuthentication: Staff cookie.",
+            "description": "Full staff bill, events and refunds\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}",
               "host": [
@@ -2866,9 +3158,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Order mark-paid with audit/event\n\nAuthentication: Staff cookie.",
+            "description": "Order mark-paid with audit/event\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/mark-paid",
               "host": [
@@ -2911,9 +3210,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Order mark-delivered with audit/event\n\nAuthentication: Staff cookie.",
+            "description": "Order mark-delivered with audit/event\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/mark-delivered",
               "host": [
@@ -2956,9 +3262,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Order cancel with audit/event\n\nAuthentication: Staff cookie.",
+            "description": "Order cancel with audit/event\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/cancel",
               "host": [
@@ -3001,9 +3314,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Request full online refund\n\nAuthentication: Staff cookie.",
+            "description": "Request full online refund\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/refunds",
               "host": [
@@ -3046,9 +3366,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Manually assign pickup code to a confirmed order\n\nAuthentication: Staff cookie.\n\nOWNER, FULFILMENT or SUPPORT. Accepts a unique 1–80 character code. Order must be CONFIRMED. Writes assignment, order event, audit and pickup SMS enqueueing in one transaction. Repeating the current code succeeds without duplicate notifications.",
+            "description": "Manually assign pickup code to a confirmed order\n\nAuthentication: Admin bearer JWT.\n\nOWNER, FULFILMENT or SUPPORT. Accepts a unique 1–80 character code. Order must be CONFIRMED. Writes assignment, order event, audit and pickup SMS enqueueing in one transaction. Repeating the current code succeeds without duplicate notifications.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/orders/{{bill_number}}/pickup-code",
               "host": [
@@ -3086,9 +3413,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List payment-attempts (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List payment-attempts (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/payment-attempts",
               "host": [
@@ -3159,9 +3493,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List payment-events (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List payment-events (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/payment-events",
               "host": [
@@ -3226,9 +3567,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List refunds (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List refunds (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/refunds",
               "host": [
@@ -3300,9 +3648,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Approve with named-staff dual control\n\nAuthentication: Staff cookie.",
+            "description": "Approve with named-staff dual control\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/refunds/{{refund_id}}/approve",
               "host": [
@@ -3336,9 +3691,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Resolve an independently verified unknown/manual refund\n\nAuthentication: Staff cookie.",
+            "description": "Resolve an independently verified unknown/manual refund\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/refunds/{{refund_id}}/resolve",
               "host": [
@@ -3376,9 +3738,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List staff (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List staff (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff",
               "host": [
@@ -3448,9 +3817,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Create named staff\n\nAuthentication: Staff cookie.",
+            "description": "Create named staff\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff",
               "host": [
@@ -3487,9 +3863,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Staff disable with audit and session rules\n\nAuthentication: Staff cookie.",
+            "description": "Staff disable with audit and session rules\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff/{{staff_id}}/disable",
               "host": [
@@ -3519,9 +3902,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Staff enable with audit and session rules\n\nAuthentication: Staff cookie.",
+            "description": "Staff enable with audit and session rules\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff/{{staff_id}}/enable",
               "host": [
@@ -3555,9 +3945,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Staff reset-password with audit and session rules\n\nAuthentication: Staff cookie.",
+            "description": "Staff reset-password with audit and session rules\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff/{{staff_id}}/reset-password",
               "host": [
@@ -3595,9 +3992,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List sms-logs (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List sms-logs (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/sms-logs",
               "host": [
@@ -3656,9 +4060,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List outbox (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List outbox (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/outbox",
               "host": [
@@ -3723,9 +4134,16 @@
             "method": "GET",
             "header": [],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "List audit-logs (role permission enforced)\n\nAuthentication: Staff cookie.",
+            "description": "List audit-logs (role permission enforced)\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/audit-logs",
               "host": [
@@ -3790,9 +4208,16 @@
               }
             ],
             "auth": {
-              "type": "noauth"
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
             },
-            "description": "Upload validated WebP; content kind requires 3:1\n\nAuthentication: Staff cookie.",
+            "description": "Upload validated WebP; content kind requires 3:1\n\nAuthentication: Admin bearer JWT.",
             "url": {
               "raw": "{{base_url}}/api/v1/admin/uploads",
               "host": [

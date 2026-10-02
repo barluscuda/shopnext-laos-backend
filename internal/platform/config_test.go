@@ -7,6 +7,7 @@ import (
 
 func TestProductionConfiguration(t *testing.T) {
 	t.Setenv("CONFIG_FILE", "")
+	t.Setenv("ADMIN_JWT_SECRET", strings.Repeat("a", 32))
 	t.Setenv("TRUST_DEVICE_SECRET", strings.Repeat("t", 32))
 	t.Setenv("CLIENT_PAYMENT_WEBHOOK_URL", "https://shop.example/api/payments")
 	t.Setenv("CLIENT_PAYMENT_WEBHOOK_SECRET", strings.Repeat("n", 32))
@@ -26,6 +27,13 @@ func TestProductionConfiguration(t *testing.T) {
 	if _, err := LoadConfig(); err != nil {
 		t.Fatal(err)
 	}
+	for _, secret := range []string{"", "short", "development-only-admin-jwt-secret-change-for-production"} {
+		t.Setenv("ADMIN_JWT_SECRET", secret)
+		if _, err := LoadConfig(); err == nil {
+			t.Fatal("production accepted missing, short or development admin JWT secret")
+		}
+	}
+	t.Setenv("ADMIN_JWT_SECRET", strings.Repeat("a", 32))
 	t.Setenv("ALLOWED_ORIGINS", "http://shop.example")
 	if _, err := LoadConfig(); err == nil {
 		t.Fatal("production HTTP origin")

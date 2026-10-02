@@ -35,7 +35,7 @@ response schemas. Liveness returns `{"status":"ok"}` without an envelope.
 CSV export, media downloads and the OpenAPI download return their own formats.
 Order creation returns HTTP 201; other successful JSON operations return 200.
 
-## Header keys, staff cookies, CSRF and origins
+## Header keys, admin JWTs, CSRF and origins
 
 The customer client is a Next.js server. The backend returns customer keys in
 JSON and authenticates them from headers; it does not set or accept customer
@@ -54,9 +54,14 @@ customer key to the server instead of the customer's device. Each trust-key use
 checks both the signature and the stored token, order, User-Agent and expiry.
 A trust key cannot create an order or query another order or phone history.
 
-Staff login continues to use `shopnext_staff`, HttpOnly, SameSite=Lax and Secure
-in production, with an eight-hour lifetime. Staff password reset and disable
-revoke staff sessions. Staff authentication is separate from customer keys.
+Staff login returns `data.access_token` (an HS256 JWT), `token_type: "Bearer"`,
+`expires_in: 28800`, and `actor`. Send `Authorization: Bearer <access_token>` on
+all protected admin requests, including session lookup, logout and uploads.
+Staff JWTs expire after eight hours. PostgreSQL checks the session and current
+staff permissions on every request; logout, password reset and disabling staff
+revoke sessions immediately. Admin cookies are no longer accepted. Configure
+`ADMIN_JWT_SECRET` with an independent random secret of at least 32 characters
+in production. Existing staff must log in again after this rollout.
 
 Send `X-ShopNext-CSRF: 1` on mutations, including server requests, OTP requests,
 login, logout, DELETE operations and uploads. Provider webhooks and maintenance
@@ -199,7 +204,8 @@ rows. Public bill status remains available if notification delivery is delayed.
 Create the first owner with `make staff EMAIL=owner@example.com NAME="Owner"`.
 The development database starts empty. Log in with `POST /admin/auth/login`,
 body `{"email":"<staff email>","password":"<staff password>"}`, plus the CSRF
-header. Retain the cookie, check `/admin/auth/session`, and log out through
+header. Retain `data.access_token`, send it as an Authorization bearer header,
+check `/admin/auth/session`, and log out through
 `POST /admin/auth/logout`.
 
 | Capability | Roles |
@@ -274,7 +280,7 @@ Liveness checks the process; readiness checks PostgreSQL and Redis.
 | Status | Meaning / action |
 | --- | --- |
 | 400 | Invalid JSON, fields, pagination, sort or business input; correct the request. |
-| 401 | Missing/invalid staff session, maintenance secret or callback signature. |
+| 401 | Missing/invalid/expired admin JWT or revoked staff session, maintenance secret or callback signature. |
 | 403 | CSRF/origin rejection, insufficient permission or phone ownership mismatch. |
 | 404 | Resource unavailable, unknown route or disabled development endpoint. |
 | 409 | State conflict, inventory conflict or changed idempotent checkout. |
@@ -293,8 +299,7 @@ It uses the [Postman Collection v2.1 schema](https://schema.postman.com/json/col
 and includes all 86 OpenAPI operations grouped by resource.
 
 1. Set `base_url` to the origin, default `http://localhost:8080`, without a trailing
-   slash or `/api/v1` suffix. Keep cookie handling enabled and use the same host
-   throughout the flow.
+   slash or `/api/v1` suffix.
 2. Supply your test phone and `otp_code`; request and verify OTP individually. Copy the returned key into a private `phone_verification_key` variable; for device access set `trust_device_key` and `user_agent`. Enable its header and disable the OTP header when testing trust access.
    Development `dev_code` is not automatically captured. Use local/private
    variables for credentials and OTPs; exported defaults are blank.
@@ -303,7 +308,8 @@ and includes all 86 OpenAPI operations grouped by resource.
    Set an `idempotency_key` for checkout. Successful checkout captures only
    `bill_number` into the collection variables. An environment variable with the
    same name overrides it; update or remove that override when needed.
-4. For staff requests set `staff_email` and `staff_password`, then send login.
+4. For staff requests set `staff_email` and `staff_password`, then send login. Copy `data.access_token` into a private
+   `admin_access_token` variable for subsequent admin requests.
    Staff creation/reset uses `new_staff_password`; creation also uses
    `new_staff_email` and `new_staff_name`.
 5. Optional query parameters start disabled. Enable and edit the ones you need.
@@ -318,8 +324,8 @@ Send requests individually in the workflow you intend. A full collection run
 includes creates, deletes, staff changes, payment actions and refunds; it is not
 an automated scenario. Placeholder examples need existing IDs and valid
 resource-specific values. The collection does not save passwords, OTPs or
-cookies into variables or print them in scripts. Keep Postman's request history
-and cookie storage private.
+tokens automatically into variables or print them in scripts. Keep Postman's
+request history and credential variables private.
 
 ## Keeping documentation current
 

@@ -424,6 +424,8 @@ Log in named staff or optional legacy owner
 
 **Authentication:** Public.
 
+Returns an eight-hour access_token, token_type, expires_in (seconds), and actor in data. Send Authorization: Bearer <access_token> on protected admin requests. No cookies are issued. Requires X-ShopNext-CSRF: 1.
+
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
@@ -446,13 +448,13 @@ Example (replace `{{variables}}` with real values):
 
 | Success status | Content type | Response |
 | --- | --- | --- |
-| 200 | `application/json` | object: `data` [Actor](#actor) |
+| 200 | `application/json` | object: `data` [AdminLogin](#adminlogin) |
 
 ## GET /api/v1/admin/auth/session
 
 Read staff identity
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -460,9 +462,11 @@ Read staff identity
 
 ## POST /api/v1/admin/auth/logout
 
-Revoke staff cookie
+Revoke the current admin JWT session
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
+
+Requires a valid admin bearer JWT. Revokes its PostgreSQL session immediately, including legacy-owner sessions.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -476,7 +480,7 @@ Revoke staff cookie
 
 Revenue, trends, statuses and low stock
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Success status | Content type | Response |
 | --- | --- | --- |
@@ -486,7 +490,7 @@ Revenue, trends, statuses and low stock
 
 List products (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -507,7 +511,7 @@ List products (role permission enforced)
 
 Create product with initial variants/images
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -569,7 +573,7 @@ Example (replace `{{variables}}` with real values):
 
 List categories (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -587,7 +591,7 @@ List categories (role permission enforced)
 
 Create categories
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -621,7 +625,7 @@ Example (replace `{{variables}}` with real values):
 
 List providers (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -639,7 +643,7 @@ List providers (role permission enforced)
 
 Create providers
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -669,7 +673,7 @@ Example (replace `{{variables}}` with real values):
 
 List branches (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -688,7 +692,7 @@ List branches (role permission enforced)
 
 Create delivery branch
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -722,7 +726,7 @@ Example (replace `{{variables}}` with real values):
 
 List hero-slides (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -740,7 +744,7 @@ List hero-slides (role permission enforced)
 
 Create hero-slides
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -782,7 +786,7 @@ Example (replace `{{variables}}` with real values):
 
 List promo-banners (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -800,7 +804,7 @@ List promo-banners (role permission enforced)
 
 Create promo-banners
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -842,7 +846,7 @@ Example (replace `{{variables}}` with real values):
 
 List orders (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -862,7 +866,7 @@ List orders (role permission enforced)
 
 List payment-attempts (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -882,7 +886,7 @@ List payment-attempts (role permission enforced)
 
 List payment-events (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -901,7 +905,7 @@ List payment-events (role permission enforced)
 
 List refunds (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -921,7 +925,7 @@ List refunds (role permission enforced)
 
 List staff (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -940,7 +944,7 @@ List staff (role permission enforced)
 
 Create named staff
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -974,7 +978,7 @@ Example (replace `{{variables}}` with real values):
 
 List sms-logs (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -992,7 +996,7 @@ List sms-logs (role permission enforced)
 
 List outbox (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1011,7 +1015,7 @@ List outbox (role permission enforced)
 
 List audit-logs (role permission enforced)
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1029,7 +1033,7 @@ List audit-logs (role permission enforced)
 
 Export filtered orders as UTF-8 CSV
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1045,7 +1049,7 @@ Export filtered orders as UTF-8 CSV
 
 Full staff bill, events and refunds
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1059,7 +1063,7 @@ Full staff bill, events and refunds
 
 Order mark-paid with audit/event
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1088,7 +1092,7 @@ Example (replace `{{variables}}` with real values):
 
 Order mark-delivered with audit/event
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1117,7 +1121,7 @@ Example (replace `{{variables}}` with real values):
 
 Order cancel with audit/event
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1146,7 +1150,7 @@ Example (replace `{{variables}}` with real values):
 
 Request full online refund
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1175,7 +1179,7 @@ Example (replace `{{variables}}` with real values):
 
 Approve with named-staff dual control
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1190,7 +1194,7 @@ Approve with named-staff dual control
 
 Resolve an independently verified unknown/manual refund
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1221,7 +1225,7 @@ Example (replace `{{variables}}` with real values):
 
 Full product for editing
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1235,7 +1239,7 @@ Full product for editing
 
 Replace product fields; use child endpoints for variants/images
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1298,7 +1302,7 @@ Example (replace `{{variables}}` with real values):
 
 Soft-delete product
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1313,7 +1317,7 @@ Soft-delete product
 
 Restore product visibility
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1328,7 +1332,7 @@ Restore product visibility
 
 List up to 100 product variants
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1342,7 +1346,7 @@ List up to 100 product variants
 
 Add variant
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1379,7 +1383,7 @@ Example (replace `{{variables}}` with real values):
 
 Replace variant fields; cannot reduce below reserved stock
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1417,7 +1421,7 @@ Example (replace `{{variables}}` with real values):
 
 Delete unreferenced non-last variant
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1433,7 +1437,7 @@ Delete unreferenced non-last variant
 
 Attach uploaded product image
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1466,7 +1470,7 @@ Example (replace `{{variables}}` with real values):
 
 Detach image and remove unreferenced file
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1482,7 +1486,7 @@ Detach image and remove unreferenced file
 
 Replace categories fields
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1517,7 +1521,7 @@ Example (replace `{{variables}}` with real values):
 
 Delete categories subject to references
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1532,7 +1536,7 @@ Delete categories subject to references
 
 Replace providers fields
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1563,7 +1567,7 @@ Example (replace `{{variables}}` with real values):
 
 Replace hero-slides fields
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1606,7 +1610,7 @@ Example (replace `{{variables}}` with real values):
 
 Delete hero-slides subject to references
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1621,7 +1625,7 @@ Delete hero-slides subject to references
 
 Replace promo-banners fields
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1664,7 +1668,7 @@ Example (replace `{{variables}}` with real values):
 
 Delete promo-banners subject to references
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1679,7 +1683,7 @@ Delete promo-banners subject to references
 
 Delete branches subject to references
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1694,7 +1698,7 @@ Delete branches subject to references
 
 Reorder distinct members within group
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1726,7 +1730,7 @@ Example (replace `{{variables}}` with real values):
 
 Reorder distinct members within group
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1758,7 +1762,7 @@ Example (replace `{{variables}}` with real values):
 
 Reorder distinct members within group
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1790,7 +1794,7 @@ Example (replace `{{variables}}` with real values):
 
 Reorder distinct members within group
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1823,7 +1827,7 @@ Example (replace `{{variables}}` with real values):
 
 Reorder distinct members within group
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1856,7 +1860,7 @@ Example (replace `{{variables}}` with real values):
 
 Staff disable with audit and session rules
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1871,7 +1875,7 @@ Staff disable with audit and session rules
 
 Staff enable with audit and session rules
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1886,7 +1890,7 @@ Staff enable with audit and session rules
 
 Staff reset-password with audit and session rules
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1915,7 +1919,7 @@ Example (replace `{{variables}}` with real values):
 
 Upload validated WebP; content kind requires 3:1
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
@@ -1969,7 +1973,7 @@ Requires an OTP key matching the recipient phone or a valid order-scoped trust J
 
 Manually assign pickup code to a confirmed order
 
-**Authentication:** Staff cookie.
+**Authentication:** Admin bearer JWT.
 
 OWNER, FULFILMENT or SUPPORT. Accepts a unique 1–80 character code. Order must be CONFIRMED. Writes assignment, order event, audit and pickup SMS enqueueing in one transaction. Repeating the current code succeeds without duplicate notifications.
 
@@ -2797,3 +2801,12 @@ Type: object: `type` object, `bills` array of [Order](#order) or object: `type` 
 | `order_status` | string | Yes | const: `"CONFIRMED"` |
 | `paid_at` | string (date-time) | Yes |  |
 | `total_kip` | integer (int64) | Yes |  |
+
+### AdminLogin
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `access_token` | string | Yes | Signed HS256 JWT; keep private. |
+| `token_type` | string | Yes | const: `"Bearer"` |
+| `expires_in` | integer | Yes | const: `28800` |
+| `actor` | [Actor](#actor) | Yes |  |

@@ -58,7 +58,7 @@ func Open(ctx context.Context) (*Runtime, error) {
 	if cfg.ClientWebhookURL != "" {
 		clientWebhook = providers.NewClientWebhook(cfg.ClientWebhookURL, cfg.ClientWebhookSecret)
 	}
-	s := application.New(store, limiter, payment, sms, storage, application.Options{ClientWebhook: clientWebhook, TrustDeviceSecret: cfg.TrustDeviceSecret, Production: cfg.Env == "production", Hold: cfg.Hold, LegacyPasswordHash: cfg.LegacyHash, LegacySessionSecret: cfg.LegacySecret})
+	s := application.New(store, limiter, payment, sms, storage, application.Options{AdminJWTSecret: cfg.AdminJWTSecret, ClientWebhook: clientWebhook, TrustDeviceSecret: cfg.TrustDeviceSecret, Production: cfg.Env == "production", Hold: cfg.Hold, LegacyPasswordHash: cfg.LegacyHash, LegacySessionSecret: cfg.LegacySecret})
 	return &Runtime{cfg, s, store, limiter, log}, nil
 }
 func (r *Runtime) Close() { _ = r.Limiter.Close(); _ = r.Store.Close(); _ = r.Log.Sync() }
