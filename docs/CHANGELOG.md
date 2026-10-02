@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+Updated: `2026-10-03 02:18:33` (Asia/Vientiane, UTC+07:00).
+
+Base commit: `46e194fe687e86a785cf568475673e9fb3b0ff87`.
+Previously committed admin bearer JWT changes: `46e194fe687e86a785cf568475673e9fb3b0ff87`.
+
+### Added
+
+- GitHub Actions Go testing workflow for pushes, pull requests, and manual
+  runs, using the existing Docker-based `make check` and `make integration`
+  commands, enforcing Go formatting and cleaning up isolated test services.
+- CI usage documentation in the README and operations guide.
+
+### Verification
+
+- `git diff --check` passed. The workflow has not run on GitHub yet; tests
+  were not run locally for this workflow-only change.
+
 Updated: `2026-10-03 02:03:23` (Asia/Vientiane, UTC+07:00).
 
 Base commit: `aadca9ce822809630f8fa9a8d389d9d5586bc571`.

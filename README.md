@@ -101,6 +101,10 @@ Test infrastructure uses a separate Compose project in `compose.test.yaml`;
 stop it with `docker compose --env-file .env.example -f compose.test.yaml down`
 when finished.
 
+GitHub Actions runs `make check` and `make integration` on pushes, pull requests,
+and manual runs through `.github/workflows/go-tests.yml`. It rejects formatting
+changes and always stops the isolated test services after the job.
+
 See [architecture](docs/architecture.md), [feature parity](docs/feature-parity.md)
 and [operations](docs/operations.md). Real provider credentials, signature
 agreement and live merchant acceptance are deployment prerequisites; local

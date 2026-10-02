@@ -1,0 +1,39 @@
+name: Go tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Go checks and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_ENV_FILE: .env.example
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Format, vet, and test Go packages
+        run: make check
+
+      - name: Require formatted Go code
+        run: git diff --exit-code -- cmd internal migrations tests
+
+      - name: Run integration tests with PostgreSQL and Redis
+        run: make integration
+
+      - name: Stop isolated test services
+        if: always()
+        run: docker compose --env-file .env.example -f compose.test.yaml down --volumes --remove-orphans

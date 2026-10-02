@@ -1,5 +1,14 @@
 # Operations and rollout
 
+## Continuous integration
+
+The GitHub Actions workflow `.github/workflows/go-tests.yml` runs on pushes,
+pull requests, and manual dispatch. It uses the Docker toolchain from the
+repository to run `make check`, rejects Go formatting changes, then runs
+`make integration` with the isolated `shopnext_test` PostgreSQL database and
+Redis database 15. Test services are stopped even when a step fails. Compose
+uses `.env.example`; CI requires no production credentials.
+
 ## Required production configuration
 
 Set `APP_ENV=production`, explicit HTTPS `ALLOWED_ORIGINS`, production
