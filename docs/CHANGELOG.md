@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+Updated: `2026-10-03 02:48:44` (Asia/Vientiane, UTC+07:00).
+
+Base commit: `fee09d0743cb0b624a63a333c029c48a58c21f9d`.
+
+### Added
+
+- Backend security audit report documenting two confirmed medium weaknesses,
+  one conditional logging concern, dependency advisory triage, tested controls,
+  and reproduction evidence.
+- Synthetic HTTP, application, and isolated integration tests that preserve
+  the audit findings and exercise security boundaries.
+
+### Verification
+
+- `make check`, `make integration`, targeted race checks, `govulncheck`,
+  `gosec`, and `git diff --check` were run; results and limitations are recorded
+  in `docs/security-audit-2026-10-03.md`.
+
 Updated: `2026-10-03 02:18:33` (Asia/Vientiane, UTC+07:00).
 
 Base commit: `46e194fe687e86a785cf568475673e9fb3b0ff87`.
