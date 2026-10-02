@@ -242,11 +242,12 @@ type Refund struct {
 }
 type OTP struct {
 	Base
-	Phone      string     `json:"phone"`
-	CodeHash   string     `json:"-"`
-	ExpiresAt  time.Time  `json:"expires_at"`
-	Attempts   int        `json:"attempts"`
-	ConsumedAt *time.Time `json:"consumed_at"`
+	Phone         string     `json:"phone"`
+	CodeHash      string     `json:"-"`
+	ChallengeHash string     `json:"-"`
+	ExpiresAt     time.Time  `json:"expires_at"`
+	Attempts      int        `json:"attempts"`
+	ConsumedAt    *time.Time `json:"consumed_at"`
 }
 type PhoneToken struct {
 	Base

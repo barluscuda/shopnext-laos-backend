@@ -801,7 +801,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Returns a new unpredictable 256-bit challenge in every environment. Only its hash is stored. Retain the challenge privately for verification; it is never sent by SMS. The newest issuance replaces all earlier code/challenge pairs. Codes expire after five minutes and resend cooldown is 60 seconds."
       }
     },
     "/otp/verify": {
@@ -822,6 +823,15 @@
               "const": "1"
             },
             "description": "Required on all browser mutations."
+          },
+          {
+            "name": "User-Agent",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Forward the actual device User-Agent for the IP/device verification quota."
           }
         ],
         "responses": {
@@ -881,7 +891,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Requires phone, six-digit code and the secret challenge from the newest issuance. Missing or mismatched challenges return INVALID_OTP_CHALLENGE without consuming OTP attempts. Five wrong codes with the matching challenge exhaust that issuance. Verification limits are 30 requests per IP per minute, 15 per IP and User-Agent per minute, and 10 per challenge per five minutes; throttles return HTTP 429 with Retry-After. Forward the actual device User-Agent. Successful verification consumes the OTP once and returns a phone key. Pre-migration issuances must be requested again."
       }
     },
     "/phone-verification": {
@@ -9474,11 +9485,19 @@
           "code": {
             "type": "string",
             "pattern": "^[0-9]{6}$"
+          },
+          "challenge": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Secret issuance challenge returned by POST /otp/request. Keep it private and send it unchanged with the matching phone and SMS code."
           }
         },
         "required": [
           "phone",
-          "code"
+          "code",
+          "challenge"
         ]
       },
       "Login": {
@@ -9508,10 +9527,18 @@
           "dev_code": {
             "type": "string",
             "description": "Only non-production; never available in production."
+          },
+          "challenge": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Secret issuance challenge returned by POST /otp/request. Keep it private and send it unchanged with the matching phone and SMS code."
           }
         },
         "required": [
-          "requested"
+          "requested",
+          "challenge"
         ]
       },
       "PhoneVerification": {

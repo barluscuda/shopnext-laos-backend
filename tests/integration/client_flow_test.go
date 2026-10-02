@@ -19,9 +19,9 @@ import (
 
 func verificationKey(t *testing.T, h *harness, number string) string {
 	t.Helper()
-	code, err := h.s.RequestOTP(ctx, number, "test")
+	issued, err := h.s.RequestOTP(ctx, number, "test")
 	must(t, err)
-	key, err := h.s.VerifyOTP(ctx, number, code)
+	key, err := h.s.VerifyOTP(ctx, number, issued.DevCode, issued.Challenge, "test", "test-device")
 	must(t, err)
 	record := rows[domain.PhoneToken](t, h, application.PhoneTokens, application.Query{Eq: map[string]any{"token_hash": domain.Hash(key)}})[0]
 	if record.Uses != 0 || time.Until(record.ExpiresAt) < 72*time.Hour-time.Minute || time.Until(record.ExpiresAt) > 72*time.Hour {

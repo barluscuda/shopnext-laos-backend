@@ -59,7 +59,7 @@ func TestIdentifiersAndPermissions(t *testing.T) {
 	}
 }
 func TestSensitiveJSON(t *testing.T) {
-	for _, v := range []any{Staff{PasswordHash: "SECRET"}, PhoneToken{TokenHash: "SECRET"}, OTP{CodeHash: "SECRET"}, Session{TokenHash: "SECRET"}, Outbox{Message: "SECRET"}} {
+	for _, v := range []any{Staff{PasswordHash: "SECRET"}, PhoneToken{TokenHash: "SECRET"}, OTP{CodeHash: "SECRET", ChallengeHash: "SECRET"}, Session{TokenHash: "SECRET"}, Outbox{Message: "SECRET"}} {
 		raw, err := json.Marshal(v)
 		if err != nil || strings.Contains(string(raw), "SECRET") {
 			t.Fatal("secret serialized")

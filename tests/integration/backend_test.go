@@ -193,14 +193,15 @@ func TestHTTPShoppingAndAdmin(t *testing.T) {
 	w = request(t, h, "POST", "/api/v1/otp/request", map[string]string{"phone": phone})
 	expect(t, w, 200)
 	code := data[map[string]any](t, w)["dev_code"].(string)
+	challenge := data[map[string]any](t, w)["challenge"].(string)
 	expect(t, request(t, h, "POST", "/api/v1/otp/request", map[string]string{"phone": phone}), 429)
-	w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code})
+	w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code, "challenge": challenge})
 	expect(t, w, 200)
 	pc := &http.Cookie{Name: api.PhoneKeyHeader, Value: data[map[string]any](t, w)["verification_key"].(string)}
 	if len(w.Result().Cookies()) != 0 {
 		t.Fatal("customer authentication must not set cookies")
 	}
-	expect(t, request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code}), 400)
+	expect(t, request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code, "challenge": challenge}), 400)
 	expect(t, request(t, h, "GET", "/api/v1/phone-verification", nil, pc), 200)
 	w = request(t, h, "POST", "/api/v1/orders", input(v, provider, "ONLINE"), pc)
 	expect(t, w, 201)
@@ -561,20 +562,20 @@ func TestMediaContentAndInputSecurity(t *testing.T) {
 
 func TestOTPFailureLimitAndRedisWindow(t *testing.T) {
 	h := setup(t)
-	code, err := h.s.RequestOTP(ctx, phone, "ip")
+	issued, err := h.s.RequestOTP(ctx, phone, "ip")
 	must(t, err)
 	wrong := "000000"
-	if code == wrong {
+	if issued.DevCode == wrong {
 		wrong = "111111"
 	}
 	for i := 0; i < 5; i++ {
-		_, err = h.s.VerifyOTP(ctx, phone, wrong)
+		_, err = h.s.VerifyOTP(ctx, phone, wrong, issued.Challenge, "ip", "test-device")
 		wantCode(t, err, "INVALID_OTP")
 	}
-	_, err = h.s.VerifyOTP(ctx, phone, code)
+	_, err = h.s.VerifyOTP(ctx, phone, issued.DevCode, issued.Challenge, "ip", "test-device")
 	wantCode(t, err, "OTP_ATTEMPTS_EXCEEDED")
 	otp := rows[domain.OTP](t, h, application.OTPs, application.Query{})[0]
-	if otp.Attempts != 5 || otp.CodeHash == code {
+	if otp.Attempts != 5 || otp.CodeHash == issued.DevCode || otp.ChallengeHash != domain.Hash(issued.Challenge) {
 		t.Fatal("OTP persistence")
 	}
 	for i := 0; i < 3; i++ {

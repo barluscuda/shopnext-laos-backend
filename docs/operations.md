@@ -4,10 +4,19 @@
 
 The GitHub Actions workflow `.github/workflows/go-tests.yml` runs on pushes,
 pull requests, and manual dispatch. It uses the Docker toolchain from the
-repository to run `make check`, rejects Go formatting changes, then runs
+repository to run `make check`, rejects Go formatting changes, runs the pinned
+`govulncheck` v1.8.0 through `make security`, then runs
 `make integration` with the isolated `shopnext_test` PostgreSQL database and
 Redis database 15. Test services are stopped even when a step fails. Compose
-uses `.env.example`; CI requires no production credentials.
+uses `.env.example`; CI requires no production credentials. A weekly scheduled
+run also checks for advisories affecting unchanged dependencies.
+
+Dependency findings fail CI at symbol level. Review each advisory against its
+actual input path, transport/protocol and deployment prerequisites. Update to a
+fixed version and rerun `make security` and regression checks before release.
+Record any conditional finding and its evidence in an audit document; do not
+silently ignore scanner failures. Package/module-only findings still require
+triage. This scanner does not cover native WebP C code or container OS packages.
 
 ## Required production configuration
 
@@ -50,6 +59,14 @@ is read-only. Down migrations require `ALLOW_MIGRATION_DOWN=1`; the initial
 down migration destroys all application tables and is not a production rollback
 strategy. Prefer forward migrations for deployed systems.
 
+Migration 00004 adds hashed OTP challenges and expires outstanding issuances.
+Deploy the migration before the new API and coordinate storefront updates:
+`POST /otp/request` returns `data.challenge`, and `/otp/verify` requires that
+challenge alongside phone and code. Customers with an outstanding code must
+request a new issuance after rollout. Keep challenges private and out of URLs
+and logs. Deploy the new API across all replicas together so old instances
+cannot issue or verify challenge-free OTPs.
+
 Keep the uploads volume persistent and backed up. Runtime containers are
 non-root; mounted storage must be writable by UID 10001. Local media storage
 assumes API replicas share the same mounted files. Detached uploads can remain
@@ -90,7 +107,14 @@ independent verification through the permission-protected refund resolve API.
 ## Identity, privacy and legacy behavior
 
 OTP: six digits, SHA-256 stored, five-minute TTL, 60-second resend cooldown and
-five failed verification attempts. Only the newest OTP can be used. Phone
+five failed verification attempts bound to a secret 256-bit issuance challenge.
+Only the newest code/challenge pair can be used. Only the challenge hash is
+stored; missing or mismatched challenges never spend the OTP attempt budget.
+Verification quotas are 30/IP/minute, 15/IP and User-Agent/minute, and
+10/challenge/five minutes. Redis failure rejects verification. Alert on
+unusual OTP-route HTTP 400/429 rates using route/status/request ID only; never
+log codes, challenges, phone keys, trust keys, or request bodies. Panic recovery
+also logs only request ID, route and status. Phone
 verification header keys are opaque and hashed in PostgreSQL, with a three-day
 TTL and five-use limit. Customer access does not use backend cookies. Order-only
 trusted-device JWTs expire after 30 days and check stored token hashes and the
@@ -100,7 +124,9 @@ scrypt. Login, mutation and audit history never stores plaintext credentials.
 
 Optional `ADMIN_PASSWORD_HASH` (raw/base64 NeoShop scrypt format) plus
 `ADMIN_SESSION_SECRET` enables legacy shared-owner login, which now issues a
-revocable JWT. Its signing key binds ADMIN_JWT_SECRET and ADMIN_SESSION_SECRET;
+revocable JWT. All non-email aliases share one five-attempt/ten-minute owner
+quota, alongside the ten-attempt/ten-minute IP quota. Named staff email quotas
+remain independent. Its signing key binds ADMIN_JWT_SECRET and ADMIN_SESSION_SECRET;
 rotating either invalidates legacy tokens. Prefer named staff for attribution
 and dual-control separation. Migration 00003 revokes old cookie sessions and
 allows legacy JWT sessions in PostgreSQL. Deploy it before the API, then have

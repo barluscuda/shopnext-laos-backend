@@ -2,8 +2,74 @@
 
 Reviewed base commit: `fee09d0743cb0b624a63a333c029c48a58c21f9d`.
 Assessment date: 2026-10-03, Asia/Vientiane (UTC+07:00).
-Status: **two confirmed Medium weaknesses remain open**. Production code and
-dependency versions were not changed by this audit.
+Status: **SEC-01, SEC-02 and SEC-03 patched in the working tree**. The original
+assessment and reproductions below describe the reviewed base commit. Remediation
+changes and validation are recorded separately here.
+
+## Remediation — 2026-10-03
+
+Patch base: `17a316cd9c62d23be16ec5a3649e6cc563b7ea9c`.
+The patch is uncommitted and has not been deployed.
+
+- **SEC-01:** OTP request returns a secret 256-bit `challenge` in both production
+  and development. PostgreSQL stores only its SHA-256 hash. Verification requires
+  phone, code and the matching newest challenge before inspecting or changing
+  the failed-attempt budget. Missing/guessed/older challenges cannot exhaust an
+  existing issuance. The five-failure ceiling, newest-only rule, five-minute
+  lifetime and atomic one-time consumption/phone-key insertion are preserved.
+  Verification also limits 30 requests/IP/minute, 15/IP and User-Agent/minute,
+  and 10/challenge/five minutes. Redis failures reject verification before writes.
+  The IP/device limits can still affect customers sharing an IP/device signature;
+  the secret challenge prevents remote callers from spending the OTP's own budget.
+- **SEC-02:** Select the legacy owner principal before account limiting. All
+  non-email legacy aliases share a five-attempt/ten-minute quota, independent of
+  the submitted alias or source IP. The ten-attempt IP limit and named staff email
+  limits remain active. Legacy owner login remains optional.
+- **SEC-03:** Replace Gin request-dumping recovery with an outer recovery handler
+  covering middleware and routes. Logs contain only request ID, route and status;
+  panic values, headers, query values and bodies are never formatted. A started
+  response is aborted without appending an error document. Regressions cover
+  ordinary/abort/nil panics, broken pipes, connection resets and started responses.
+- **Dependencies:** Upgrade `pgx/v5` to `v5.9.2`, `quic-go` to `v0.59.1`,
+  `x/crypto` to `v0.56.0`, `x/image` to `v0.45.0`, `x/net` to `v0.57.0`,
+  `x/text` to `v0.41.0` and the required `x/sync` to `v0.22.0`.
+  Official `govulncheck` v1.8.0 with `-tags nomsgpack -show verbose ./...`
+  exits 0 with zero affected symbols and zero affected imported packages.
+  One module-only advisory remains: [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932)
+  covers unmaintained `x/crypto/openpgp`, has no fixed version, and none of its
+  affected packages is imported by this backend. `x/crypto` is needed for scrypt;
+  OpenPGP must not be added as an authentication/encryption dependency.
+- **CI:** Add `make security`, with pinned `govulncheck` installed in the Docker
+  development tools image. Push, pull request, manual and weekly scheduled runs
+  check dependencies. Symbol findings fail the gate; conditional findings require
+  documented review according to [operations](operations.md).
+
+Migration [00004](../migrations/00004_otp_challenge.sql) adds `challenge_hash` and
+expires outstanding issuances. Run it before the new API, deploy all API replicas
+and coordinate the storefront change: retain `data.challenge` from `/otp/request`
+and send it alongside phone and code to `/otp/verify`. Existing codes must be
+requested again. OpenAPI, API guide/reference, Postman examples, README and feature
+parity document this contract. No account or customer cookie was introduced.
+
+The original vulnerability proof assertions have been inverted into security
+regressions. Database coverage now includes unbound attempt isolation, resends
+and concurrent one-time verification; unit coverage includes expiry, replay,
+production response secrecy and limiter failures.
+
+Patch validation on 2026-10-03 (Asia/Vientiane):
+
+- `make check`: passed formatting, vet and the complete unit/regression suite.
+- `make integration`: passed against guarded `shopnext_test` and isolated Redis
+  with `-race` (11.207s); migration 00004 applied successfully.
+- `make security`: passed in the Docker tools image (exit 0), with zero symbol
+  and imported-package findings and the one module-only OpenPGP advisory above.
+- Targeted application/HTTP/domain/config `-race` checks: passed.
+- `make build` (`docker compose --env-file .env.example build`): passed for the
+  Alpine runtime containing API, worker, migration and staff binaries.
+- Generated API reference/Postman `--check` and `git diff --check`: passed.
+
+The remaining sections preserve the original assessment as historical evidence;
+its source line numbers and scanner results refer to the original base commit.
 
 ## Scope and evidence
 
@@ -167,9 +233,10 @@ decisions requiring operational abuse controls, not demonstrated privilege bypas
 ## Verification and reproduction
 
 The added audit files contain twelve test functions plus route/input subtests.
-Some deliberately assert the vulnerable behavior to preserve audit evidence.
-**Their passing status does not mean SEC-01/02/03 are fixed.** When fixing an
-issue, invert its proof assertions into security regression expectations.
+At the original assessment, some deliberately asserted vulnerable behavior to
+preserve audit evidence. Their passing status did not mean SEC-01/02/03 were
+fixed. The remediation above has inverted those assertions into regression
+expectations.
 
 ```sh
 make check

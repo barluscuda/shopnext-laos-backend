@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+Updated: `2026-10-03 03:10:34` (Asia/Vientiane, UTC+07:00).
+
+Base commit: `17a316cd9c62d23be16ec5a3649e6cc563b7ea9c`.
+Previously committed security audit: `17a316cd9c62d23be16ec5a3649e6cc563b7ea9c`.
+
+### Fixed
+
+- Bind OTP verification attempts to an unpredictable issuance challenge, add
+  verification rate limits, share the legacy owner login quota across aliases,
+  and keep panic recovery logs free of request contents and panic values.
+- Upgrade dependencies with available Go vulnerability fixes and add a pinned
+  `govulncheck` CI gate with weekly scans.
+- Require OTP clients to send the request challenge during verification; add
+  migration `00004_otp_challenge.sql` and update OpenAPI and client guidance.
+
+### Verification
+
+- `make check`, `make integration`, `make security`, targeted race checks,
+  `make build`, generated API documentation synchronization and
+  `git diff --check` passed. The sole remaining module-only advisory is
+  unmaintained `x/crypto/openpgp`, which the backend does not import and has no
+  fixed version; see `docs/security-audit-2026-10-03.md`.
+
 Updated: `2026-10-03 02:48:44` (Asia/Vientiane, UTC+07:00).
 
 Base commit: `fee09d0743cb0b624a63a333c029c48a58c21f9d`.

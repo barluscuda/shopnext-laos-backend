@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 1'
 
 permissions:
   contents: read
@@ -30,6 +32,9 @@ jobs:
 
       - name: Require formatted Go code
         run: git diff --exit-code -- cmd internal migrations tests
+
+      - name: Check dependency vulnerabilities
+        run: make security
 
       - name: Run integration tests with PostgreSQL and Redis
         run: make integration

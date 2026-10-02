@@ -64,7 +64,8 @@ Origins must exactly match `ALLOWED_ORIGINS` (space-separated).
 Shopping sequence:
 
 1. Browse `/products`, `/categories`, `/content` and `/delivery-options`.
-2. POST `/otp/request` with `phone`, then `/otp/verify` with `phone` and `code`.
+2. POST `/otp/request` with `phone` and retain the returned secret `challenge`.
+   POST `/otp/verify` with `phone`, `code` and `challenge`.
    Development OTP request responses include `dev_code`; production never does.
    Verification returns `verification_key` (three days, five protected uses).
    Forward it in `X-Phone-Verification-Key`; no customer cookie is used.

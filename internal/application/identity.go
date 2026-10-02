@@ -67,15 +67,22 @@ func Require(a domain.Actor, permission string) error {
 	return nil
 }
 
-func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) (string, error) {
+type OTPRequested struct {
+	Requested bool   `json:"requested"`
+	Challenge string `json:"challenge"`
+	DevCode   string `json:"dev_code,omitempty"`
+}
+
+func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) (OTPRequested, error) {
 	phone := domain.NormalizePhone(rawPhone)
 	if !domain.ValidPhone(phone) {
-		return "", domain.Fail("INVALID_PHONE", 400)
+		return OTPRequested{}, domain.Fail("INVALID_PHONE", 400)
 	}
 	if err := s.Rate(ctx, "otp-request-ip", ip, 5, time.Minute); err != nil {
-		return "", err
+		return OTPRequested{}, err
 	}
 	code := domain.Digits()
+	challenge := domain.Token(32)
 	now := time.Now().UTC()
 	err := s.Store.Transaction(ctx, func(tx Store) error {
 		if err := tx.LockKey(ctx, "otp:"+phone); err != nil {
@@ -88,25 +95,50 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) (string, 
 		if err == nil && recent.CreatedAt.Add(time.Minute).After(now) {
 			return &domain.Error{Code: "RATE_LIMITED", Message: "OTP resend cooldown", Status: 429, RetryAfter: int(time.Until(recent.CreatedAt.Add(time.Minute)).Seconds()) + 1}
 		}
-		return tx.Insert(ctx, OTPs, &domain.OTP{Base: domain.NewBase(), Phone: phone, CodeHash: domain.Hash(code), ExpiresAt: now.Add(5 * time.Minute)})
+		return tx.Insert(ctx, OTPs, &domain.OTP{Base: domain.NewBase(), Phone: phone, CodeHash: domain.Hash(code), ChallengeHash: domain.Hash(challenge), ExpiresAt: now.Add(5 * time.Minute)})
 	})
 	if err != nil {
-		return "", err
+		return OTPRequested{}, err
 	}
 	message := fmt.Sprintf("ShopNext Laos: ລະຫັດ OTP %s ໃຊ້ໄດ້ 5 ນາທີ", code)
 	accepted, sendErr := s.SMS.Send(ctx, phone, message)
 	if err := s.Store.Insert(ctx, SMSLogs, &domain.SMSLog{Base: domain.NewBase(), Phone: phone, Message: "OTP •••••• (5 minutes)", Accepted: sendErr == nil && accepted}); err != nil {
-		return "", err
+		return OTPRequested{}, err
 	}
-	if s.Options.Production {
-		return "", nil
+	result := OTPRequested{Requested: true, Challenge: challenge}
+	if !s.Options.Production {
+		result.DevCode = code
 	}
-	return code, nil
+	return result, nil
 }
-func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code string) (string, error) {
+func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code, challenge, ip, device string) (string, error) {
 	phone := domain.NormalizePhone(rawPhone)
 	if !domain.ValidPhone(phone) || len(code) != 6 {
 		return "", domain.Fail("INVALID_OTP", 400)
+	}
+	for _, digit := range code {
+		if digit < '0' || digit > '9' {
+			return "", domain.Fail("INVALID_OTP", 400)
+		}
+	}
+	if len(challenge) != 64 {
+		return "", domain.Fail("INVALID_OTP_CHALLENGE", 400)
+	}
+	if _, err := hex.DecodeString(challenge); err != nil {
+		return "", domain.Fail("INVALID_OTP_CHALLENGE", 400)
+	}
+	challengeHash := domain.Hash(challenge)
+	// A guessed challenge has a separate quota and cannot spend the real
+	// issuance's attempts. Device quotas include the source IP to avoid
+	// coupling unrelated customers with the same User-Agent.
+	if err := s.Rate(ctx, "otp-verify-ip", ip, 30, time.Minute); err != nil {
+		return "", err
+	}
+	if err := s.Rate(ctx, "otp-verify-device", ip+"\x00"+domain.Hash(device), 15, time.Minute); err != nil {
+		return "", err
+	}
+	if err := s.Rate(ctx, "otp-verify-challenge", challengeHash, 10, 5*time.Minute); err != nil {
+		return "", err
 	}
 	var token string
 	var businessErr error
@@ -121,6 +153,12 @@ func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code string) (string,
 		}
 		if err != nil {
 			return err
+		}
+		// Check the secret before reading or changing the newest OTP's attempt
+		// budget. Older, consumed, or pre-migration OTPs cannot be a fallback.
+		if record.ChallengeHash == "" || subtle.ConstantTimeCompare([]byte(record.ChallengeHash), []byte(challengeHash)) != 1 {
+			businessErr = domain.Fail("INVALID_OTP_CHALLENGE", 400)
+			return nil
 		}
 		now := time.Now().UTC()
 		switch {
@@ -186,12 +224,17 @@ func (s *Service) Login(ctx context.Context, email, password, ip string) (string
 	if err := s.Rate(ctx, "staff-login-ip", ip, 10, 10*time.Minute); err != nil {
 		return "", domain.Actor{}, err
 	}
-	if err := s.Rate(ctx, "staff-login-email", email, 5, 10*time.Minute); err != nil {
+	legacy := !strings.Contains(email, "@") && s.Options.LegacyPasswordHash != ""
+	scope, principal := "staff-login-email", email
+	if legacy {
+		scope, principal = "staff-login-legacy", "owner"
+	}
+	if err := s.Rate(ctx, scope, principal, 5, 10*time.Minute); err != nil {
 		return "", domain.Actor{}, err
 	}
 	var actor domain.Actor
 	var token string
-	if !strings.Contains(email, "@") && s.Options.LegacyPasswordHash != "" && VerifyPassword(password, s.Options.LegacyPasswordHash) {
+	if legacy && VerifyPassword(password, s.Options.LegacyPasswordHash) {
 		actor = domain.Actor{ID: "legacy", Email: "admin@local", Name: "Admin", Role: "OWNER", Legacy: true}
 		var err error
 		err = s.Store.Transaction(ctx, func(tx Store) error {

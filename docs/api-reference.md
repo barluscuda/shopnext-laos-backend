@@ -138,6 +138,8 @@ Send six-digit SMS OTP
 
 **Authentication:** Public.
 
+Returns a new unpredictable 256-bit challenge in every environment. Only its hash is stored. Retain the challenge privately for verification; it is never sent by SMS. The newest issuance replaces all earlier code/challenge pairs. Codes expire after five minutes and resend cooldown is 60 seconds.
+
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
@@ -166,9 +168,12 @@ Consume OTP and return three-day, five-use phone verification key
 
 **Authentication:** Public.
 
+Requires phone, six-digit code and the secret challenge from the newest issuance. Missing or mismatched challenges return INVALID_OTP_CHALLENGE without consuming OTP attempts. Five wrong codes with the matching challenge exhaust that issuance. Verification limits are 30 requests per IP per minute, 15 per IP and User-Agent per minute, and 10 per challenge per five minutes; throttles return HTTP 429 with Retry-After. Forward the actual device User-Agent. Successful verification consumes the OTP once and returns a phone key. Pre-migration issuances must be requested again.
+
 | Parameter | Location | Required | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `X-ShopNext-CSRF` | header | Yes | string | Required on all browser mutations. const: `"1"` |
+| `User-Agent` | header | No | string | Forward the actual device User-Agent for the IP/device verification quota. |
 
 **Request body:** `application/json` (required).
 
@@ -176,13 +181,15 @@ Consume OTP and return three-day, five-use phone verification key
 | --- | --- | --- | --- |
 | `phone` | string | Yes |  |
 | `code` | string | Yes | pattern: `"^[0-9]{6}$"` |
+| `challenge` | string | Yes | Secret issuance challenge returned by POST /otp/request. Keep it private and send it unchanged with the matching phone and SMS code.; minLength: `64`; maxLength: `64`; pattern: `"^[0-9a-f]{64}$"` |
 
 Example (replace `{{variables}}` with real values):
 
 ```json
 {
   "phone": "{{phone}}",
-  "code": "{{otp_code}}"
+  "code": "{{otp_code}}",
+  "challenge": "{{otp_challenge}}"
 }
 ```
 
@@ -2541,6 +2548,7 @@ Response objects below use snake_case; provider webhook fields retain their prov
 | --- | --- | --- | --- |
 | `phone` | string | Yes |  |
 | `code` | string | Yes | pattern: `"^[0-9]{6}$"` |
+| `challenge` | string | Yes | Secret issuance challenge returned by POST /otp/request. Keep it private and send it unchanged with the matching phone and SMS code.; minLength: `64`; maxLength: `64`; pattern: `"^[0-9a-f]{64}$"` |
 
 ### Login
 
@@ -2555,6 +2563,7 @@ Response objects below use snake_case; provider webhook fields retain their prov
 | --- | --- | --- | --- |
 | `requested` | boolean | Yes |  |
 | `dev_code` | string | No | Only non-production; never available in production. |
+| `challenge` | string | Yes | Secret issuance challenge returned by POST /otp/request. Keep it private and send it unchanged with the matching phone and SMS code.; minLength: `64`; maxLength: `64`; pattern: `"^[0-9a-f]{64}$"` |
 
 ### PhoneVerification
 

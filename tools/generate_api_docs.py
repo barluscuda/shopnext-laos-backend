@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = json.loads((ROOT / 'docs/openapi.yaml').read_text())
 METHODS = {'get', 'post', 'put', 'patch', 'delete', 'head', 'options'}
 VARIABLES = {
-    'base_url': 'http://localhost:8080', 'phone': '', 'otp_code': '',
+    'base_url': 'http://localhost:8080', 'phone': '', 'otp_code': '', 'otp_challenge': '',
     'phone_verification_key': '', 'trust_device_key': '', 'user_agent': 'ShopNext-Postman-device', 'pickup_code': '',
     'admin_access_token': '', 'staff_email': '', 'staff_password': '', 'new_staff_password': '',
     'new_staff_email': '', 'new_staff_name': 'Test staff',
@@ -82,7 +82,7 @@ def example(schema, field='', schema_name=''):
         return '{{staff_password}}' if schema_name == 'Login' else '{{new_staff_password}}'
     if field == 'email':
         return '{{staff_email}}' if schema_name == 'Login' else '{{new_staff_email}}'
-    mapped = {'code': 'otp_code', 'recipient_phone': 'phone', 'bank': 'payment_method',
+    mapped = {'challenge': 'otp_challenge', 'code': 'otp_code', 'recipient_phone': 'phone', 'bank': 'payment_method',
               'url': 'media_url', 'image_url': 'media_url', 'transactionId': 'provider_transaction_id',
               'billNumber': 'bill_number'}
     var = mapped.get(field, field)
@@ -267,7 +267,7 @@ def generate():
             md += ['```json', json.dumps(schema, indent=2, ensure_ascii=False), '```', '']
     collection = {'info': {'name': 'ShopNext Laos API',
         'schema': 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
-        'description': 'Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and copy the admin login access_token into a private admin_access_token variable. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged.'},
+        'description': 'Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and copy the admin login access_token into a private admin_access_token variable. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. Copy the OTP request challenge into a private local otp_challenge variable for verification. No credentials, OTPs or challenges are captured or logged.'},
         'variable': [{'key': k, 'value': v, 'type': 'string'} for k, v in VARIABLES.items()],
         'item': [{'name': name, 'item': items} for name, items in folders.items()]}
     return {'docs/api-reference.md': '\n'.join(md),

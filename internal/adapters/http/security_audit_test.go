@@ -6,17 +6,20 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"shopnext-laos/internal/adapters/media"
 	"shopnext-laos/internal/adapters/providers"
 	"shopnext-laos/internal/application"
@@ -157,26 +160,52 @@ func TestSecurityAuditMediaRejectsTraversalAndSymlinks(t *testing.T) {
 	}
 }
 
-func TestSecurityAuditRecoveryCanLogCustomIdentityHeaders(t *testing.T) {
-	// Inject the network panic into a test-only handler to demonstrate the
-	// logging behavior. This does not establish a reachable production panic.
+func TestSecurityRecoveryNeverLogsRequestSecretsOrPanicValues(t *testing.T) {
 	var captured bytes.Buffer
 	previous := gin.DefaultErrorWriter
 	gin.DefaultErrorWriter = &captured
 	t.Cleanup(func() { gin.DefaultErrorWriter = previous })
+	_, _, cfg := securityAuditRouter(t)
+	log := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(&captured), zap.DebugLevel))
+	for _, panicValue := range []any{
+		"synthetic-panic-marker", http.ErrAbortHandler,
+		&net.OpError{Op: "write", Net: "tcp", Err: syscall.EPIPE},
+		&net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET},
+		nil,
+	} {
+		router, err := New(&application.Service{}, cfg, log)
+		if err != nil {
+			t.Fatal(err)
+		}
+		router.GET("/security-audit/panic", func(*gin.Context) { panic(panicValue) })
+		req := httptest.NewRequest(http.MethodGet, "/security-audit/panic?customer=synthetic-query-marker", strings.NewReader("synthetic-body-marker"))
+		req.Header.Set(PhoneKeyHeader, "synthetic-phone-marker")
+		req.Header.Set(TrustDeviceHeader, "synthetic-trust-marker")
+		req.Header.Set("Authorization", "Bearer synthetic-staff-marker")
+		req.Header.Set("Cookie", "secret=synthetic-cookie-marker")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != 500 || !strings.Contains(rec.Body.String(), "INTERNAL_ERROR") {
+			t.Fatal("panic did not produce the generic error response")
+		}
+		if strings.Contains(rec.Body.String(), "synthetic-") || strings.Contains(captured.String(), "synthetic-") {
+			t.Fatal("recovery disclosed a request secret or panic value")
+		}
+	}
+	if !strings.Contains(captured.String(), "request_id") || !strings.Contains(captured.String(), `"status":500`) {
+		t.Fatal("safe diagnostic fields were not logged")
+	}
+}
+
+func TestSecurityRecoveryAbortsStartedResponse(t *testing.T) {
 	router, _, _ := securityAuditRouter(t)
-	router.(*gin.Engine).GET("/security-audit/panic", func(*gin.Context) { panic(http.ErrAbortHandler) })
-	req := httptest.NewRequest(http.MethodGet, "/security-audit/panic", nil)
-	req.Header.Set(PhoneKeyHeader, "synthetic-phone-marker")
-	req.Header.Set(TrustDeviceHeader, "synthetic-trust-marker")
-	req.Header.Set("Authorization", "Bearer synthetic-staff-marker")
-	router.ServeHTTP(httptest.NewRecorder(), req)
-	logged := captured.String()
-	if !strings.Contains(logged, "synthetic-phone-marker") || !strings.Contains(logged, "synthetic-trust-marker") {
-		t.Fatal("custom identity header logging behavior changed; reassess the finding")
+	router.(*gin.Engine).GET("/security-audit/stream", func(c *gin.Context) {
+		c.String(200, "started")
+		panic("synthetic-panic-marker")
+	}, func(c *gin.Context) { c.String(200, "continued") })
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/security-audit/stream", nil))
+	if rec.Code != 200 || rec.Body.String() != "started" {
+		t.Fatal("recovery appended an error or continued an aborted response")
 	}
-	if strings.Contains(logged, "synthetic-staff-marker") {
-		t.Fatal("Authorization was not redacted")
-	}
-	// Do not print the captured request dump, even though its data is synthetic.
 }

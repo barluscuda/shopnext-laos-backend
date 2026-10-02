@@ -7,10 +7,11 @@ import (
 	"shopnext-laos/internal/application"
 	"shopnext-laos/internal/domain"
 	"testing"
+	"time"
 )
 
 // These probes use only the guarded shopnext_test harness and synthetic data.
-func TestSecurityProofUnauthenticatedOTPExhaustion(t *testing.T) {
+func TestSecurityOTPChallengePreventsUnauthenticatedExhaustion(t *testing.T) {
 	h := setup(t)
 	w := request(t, h, "POST", "/api/v1/otp/request", map[string]string{"phone": phone})
 	if w.Code != 200 {
@@ -20,30 +21,92 @@ func TestSecurityProofUnauthenticatedOTPExhaustion(t *testing.T) {
 	if !ok || len(code) != 6 {
 		t.Fatal("test adapter did not provide the synthetic OTP")
 	}
+	challenge, ok := data[map[string]any](t, w)["challenge"].(string)
+	if !ok || len(challenge) != 64 {
+		t.Fatal("OTP issuance did not provide a challenge")
+	}
 	wrong := "000000"
 	if code == wrong {
 		wrong = "111111"
 	}
-	// No verification key, trust key, staff login or challenge ID is supplied.
-	for i := 0; i < 5; i++ {
-		w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": wrong})
-		if w.Code != 400 {
-			t.Fatalf("unauthenticated wrong-code probe returned HTTP %d", w.Code)
+	// Both omitted and independently guessed secrets must leave the victim's
+	// attempt budget intact, even when the attacker knows the correct SMS code.
+	for _, secret := range []string{"", domain.Token(32)} {
+		for i := 0; i < 5; i++ {
+			w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": wrong, "challenge": secret})
+			expect(t, w, 400)
 		}
 	}
-	w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code})
-	if w.Code != 429 {
-		t.Fatalf("victim's correct OTP after exhaustion returned HTTP %d", w.Code)
-	}
+	w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code, "challenge": domain.Token(32)})
+	expect(t, w, 400)
 	stored := rows[domain.OTP](t, h, application.OTPs, application.Query{})[0]
-	if stored.Attempts != 5 || stored.ConsumedAt != nil {
-		t.Fatal("wrong-code probes did not exhaust the victim's active OTP")
+	if stored.Attempts != 0 || stored.ConsumedAt != nil || stored.ChallengeHash != domain.Hash(challenge) {
+		t.Fatal("unbound probes changed the victim's active OTP")
 	}
 	n, err := h.db.Count(ctx, application.PhoneTokens, application.Query{})
 	must(t, err)
 	if n != 0 {
-		t.Fatal("exhausted OTP unexpectedly issued a phone key")
+		t.Fatal("unbound probe issued a phone key")
 	}
+	w = request(t, h, "POST", "/api/v1/otp/verify", map[string]string{"phone": phone, "code": code, "challenge": challenge})
+	expect(t, w, 200)
+	if data[map[string]any](t, w)["verification_key"] == "" {
+		t.Fatal("legitimate verification did not issue a key")
+	}
+}
+
+func TestSecurityOTPNewestIssuanceAndConcurrentConsumption(t *testing.T) {
+	h := setup(t)
+	old, err := h.s.RequestOTP(ctx, phone, "192.0.2.1")
+	must(t, err)
+	stored := rows[domain.OTP](t, h, application.OTPs, application.Query{})[0]
+	// Simulate the resend cooldown passing without expiring the original code.
+	must(t, h.db.Update(ctx, application.OTPs, stored.ID, map[string]any{"created_at": time.Now().Add(-2 * time.Minute)}))
+	newest, err := h.s.RequestOTP(ctx, phone, "192.0.2.1")
+	must(t, err)
+	if old.Challenge == newest.Challenge {
+		t.Fatal("resend reused a challenge")
+	}
+	_, err = h.s.VerifyOTP(ctx, phone, old.DevCode, old.Challenge, "192.0.2.1", "device")
+	wantCode(t, err, "INVALID_OTP_CHALLENGE")
+	for _, record := range rows[domain.OTP](t, h, application.OTPs, application.Query{}) {
+		if record.Attempts != 0 || record.ConsumedAt != nil {
+			t.Fatal("old challenge changed either issuance")
+		}
+	}
+	type result struct {
+		key string
+		err error
+	}
+	results := make(chan result, 8)
+	for i := 0; i < cap(results); i++ {
+		go func() {
+			key, err := h.s.VerifyOTP(ctx, phone, newest.DevCode, newest.Challenge, "192.0.2.1", "device")
+			results <- result{key, err}
+		}()
+	}
+	successes := 0
+	for i := 0; i < cap(results); i++ {
+		r := <-results
+		if r.err == nil {
+			if r.key == "" {
+				t.Fatal("successful verification did not issue a key")
+			}
+			successes++
+		} else {
+			wantCode(t, r.err, "OTP_NOT_FOUND")
+		}
+	}
+	if successes != 1 {
+		t.Fatal("concurrent verification consumed the OTP more than once")
+	}
+	n, err := h.db.Count(ctx, application.PhoneTokens, application.Query{})
+	must(t, err)
+	if n != 1 {
+		t.Fatal("concurrent verification persisted more than one phone key")
+	}
+	_, err = h.s.VerifyOTP(ctx, phone, old.DevCode, old.Challenge, "192.0.2.1", "device")
+	wantCode(t, err, "INVALID_OTP_CHALLENGE")
 }
 
 func TestSecurityCheckoutRejectsClientMoneyAndInvalidQuantities(t *testing.T) {

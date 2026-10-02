@@ -2,7 +2,7 @@
   "info": {
     "name": "ShopNext Laos API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and copy the admin login access_token into a private admin_access_token variable. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. No credentials or OTPs are captured or logged."
+    "description": "Generated from docs/openapi.yaml. See docs/api.md. Set base_url to the origin without /api/v1 or a trailing slash. Set customer verification/trust headers manually and copy the admin login access_token into a private admin_access_token variable. Fill variables before sending requests. Secrets are intentionally blank. Run requests individually: mutations change business state. Checkout captures bill_number only; copy customer verification/trust keys into private local variables manually. Copy the OTP request challenge into a private local otp_challenge variable for verification. No credentials, OTPs or challenges are captured or logged."
   },
   "variable": [
     {
@@ -17,6 +17,11 @@
     },
     {
       "key": "otp_code",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otp_challenge",
       "value": "",
       "type": "string"
     },
@@ -518,7 +523,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Send six-digit SMS OTP\n\nAuthentication: Public.",
+            "description": "Send six-digit SMS OTP\n\nAuthentication: Public.\n\nReturns a new unpredictable 256-bit challenge in every environment. Only its hash is stored. Retain the challenge privately for verification; it is never sent by SMS. The newest issuance replaces all earlier code/challenge pairs. Codes expire after five minutes and resend cooldown is 60 seconds.",
             "url": {
               "raw": "{{base_url}}/api/v1/otp/request",
               "host": [
@@ -554,6 +559,11 @@
                 "description": "Required on all browser mutations."
               },
               {
+                "key": "User-Agent",
+                "value": "{{user_agent}}",
+                "description": "Forward the actual device User-Agent for the IP/device verification quota."
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -561,7 +571,7 @@
             "auth": {
               "type": "noauth"
             },
-            "description": "Consume OTP and return three-day, five-use phone verification key\n\nAuthentication: Public.",
+            "description": "Consume OTP and return three-day, five-use phone verification key\n\nAuthentication: Public.\n\nRequires phone, six-digit code and the secret challenge from the newest issuance. Missing or mismatched challenges return INVALID_OTP_CHALLENGE without consuming OTP attempts. Five wrong codes with the matching challenge exhaust that issuance. Verification limits are 30 requests per IP per minute, 15 per IP and User-Agent per minute, and 10 per challenge per five minutes; throttles return HTTP 429 with Retry-After. Forward the actual device User-Agent. Successful verification consumes the OTP once and returns a phone key. Pre-migration issuances must be requested again.",
             "url": {
               "raw": "{{base_url}}/api/v1/otp/verify",
               "host": [
@@ -576,7 +586,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{otp_code}}\"\n}",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{otp_code}}\",\n  \"challenge\": \"{{otp_challenge}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

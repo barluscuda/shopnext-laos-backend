@@ -76,10 +76,17 @@ match `ALLOWED_ORIGINS`. Server requests can omit Origin. OPTIONS returns 204.
    details. `GET /geography` supplies valid province/district pairs;
    `GET /payment-methods` supplies banks and payment hold duration.
 2. Request OTP through `POST /otp/request`, body `{"phone":"<customer phone>"}`.
-   Only the newest six-digit code works. It expires after five minutes; resend
-   cooldown is 60 seconds; five failed verification attempts exhaust the OTP.
-   Development can return `dev_code`; production never returns it.
-3. Verify through `POST /otp/verify`, body `{"phone":"<customer phone>","code":"<code>"}`.
+   Response data includes `requested: true` and a secret 64-character hex
+   `challenge` in every environment. Retain it privately with the requesting
+   flow. Only the newest code/challenge pair works; it expires after five
+   minutes and resend cooldown is 60 seconds. Five wrong codes with the matching
+   challenge exhaust the OTP. Development can return `dev_code`; production
+   never returns it.
+3. Verify through `POST /otp/verify`, body `{"phone":"<customer phone>","code":"<code>","challenge":"<challenge>"}`.
+   Missing or mismatched challenges return `INVALID_OTP_CHALLENGE` without
+   spending OTP attempts. Forward the actual device User-Agent. Limits are
+   30 requests per IP per minute, 15 per IP/device per minute, and 10 per
+   challenge per five minutes; HTTP 429 includes `Retry-After`.
    Response data contains `verified`, `verification_key`, `expires_at` and
    `max_uses: 5`. No Set-Cookie is emitted. Store the key in Next.js and forward
    it in `X-Phone-Verification-Key`. `GET /phone-verification` checks it without
@@ -300,7 +307,7 @@ and includes all 86 OpenAPI operations grouped by resource.
 
 1. Set `base_url` to the origin, default `http://localhost:8080`, without a trailing
    slash or `/api/v1` suffix.
-2. Supply your test phone and `otp_code`; request and verify OTP individually. Copy the returned key into a private `phone_verification_key` variable; for device access set `trust_device_key` and `user_agent`. Enable its header and disable the OTP header when testing trust access.
+2. Supply your test phone; request OTP, then copy `data.challenge` into a private local `otp_challenge` variable. Set `otp_code` from the SMS and verify individually. Copy the returned key into a private `phone_verification_key` variable; for device access set `trust_device_key` and `user_agent`. Enable its header and disable the OTP header when testing trust access.
    Development `dev_code` is not automatically captured. Use local/private
    variables for credentials and OTPs; exported defaults are blank.
 3. Set delivery/catalog variables from responses: `product_slug`, `product_id`,

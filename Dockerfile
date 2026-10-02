@@ -2,7 +2,8 @@ FROM golang:1.27.1-alpine3.24 AS development
 RUN apk add --no-cache build-base
 WORKDIR /src
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod download \
+ && go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 COPY . .
 FROM development AS build
 RUN go build -tags nomsgpack -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := dev
-.PHONY: fmt check integration dev migrate api worker staff build logs stop
+.PHONY: fmt check security integration dev migrate api worker staff build logs stop
 
 # Do not let Compose implicitly open .env. Supply configuration via the shell.
 COMPOSE_ENV_FILE ?= $(if $(wildcard .env.example),.env.example,/dev/null)
@@ -13,6 +13,8 @@ fmt:
 	$(COMPOSE) run --build --rm --no-deps tools gofmt -w cmd internal migrations tests
 check:
 	$(COMPOSE) run --build --rm --no-deps tools sh -c 'gofmt -w cmd internal migrations tests && go vet -tags nomsgpack ./... && go test -tags nomsgpack ./...'
+security:
+	$(COMPOSE) run --build --rm --no-deps tools govulncheck -tags nomsgpack ./...
 integration:
 	$(COMPOSE) -f compose.test.yaml run --build --rm tests
 dev:

@@ -40,11 +40,28 @@ func New(s *application.Service, cfg platform.Config, log *zap.Logger) (*gin.Eng
 		return nil, err
 	}
 	h := &Handler{s, cfg, log, r}
+	r.Use(h.recovery)
 	r.Use(h.middleware)
-	r.Use(gin.CustomRecovery(func(c *gin.Context, _ any) { h.failure(c, domain.Fail("INTERNAL_ERROR", 500)) }))
 	h.routes()
 	return r, nil
 }
+
+// recovery never formats a panic value or dumps a request: either can contain
+// credentials or personal information. Already-started responses are aborted.
+func (h *Handler) recovery(c *gin.Context) {
+	defer func() {
+		if recover() != nil {
+			if c.Writer.Written() {
+				c.Abort()
+				h.Log.Error("request failed", zap.String("request_id", c.GetString("request_id")), zap.String("route", c.FullPath()), zap.Int("status", c.Writer.Status()))
+				return
+			}
+			h.failure(c, domain.Fail("INTERNAL_ERROR", 500))
+		}
+	}()
+	c.Next()
+}
+
 func (h *Handler) failure(c *gin.Context, err error) {
 	status := 500
 	code := "INTERNAL_ERROR"
@@ -268,23 +285,20 @@ func (h *Handler) routes() {
 			h.failure(c, err)
 			return
 		}
-		code, err := h.Service.RequestOTP(c.Request.Context(), in.Phone, c.ClientIP())
-		result := gin.H{"requested": true}
-		if code != "" {
-			result["dev_code"] = code
-		}
+		result, err := h.Service.RequestOTP(c.Request.Context(), in.Phone, c.ClientIP())
 		h.send(c, result, err)
 	})
 	v.POST("/otp/verify", func(c *gin.Context) {
 		var in struct {
-			Phone string `json:"phone"`
-			Code  string `json:"code"`
+			Phone     string `json:"phone"`
+			Code      string `json:"code"`
+			Challenge string `json:"challenge"`
 		}
 		if err := decode(c, &in); err != nil {
 			h.failure(c, err)
 			return
 		}
-		token, err := h.Service.VerifyOTP(c.Request.Context(), in.Phone, in.Code)
+		token, err := h.Service.VerifyOTP(c.Request.Context(), in.Phone, in.Code, in.Challenge, c.ClientIP(), c.Request.UserAgent())
 		if err != nil {
 			h.failure(c, err)
 			return
