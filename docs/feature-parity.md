@@ -24,6 +24,12 @@ No customer accounts, coupons or wishlist were introduced.
 | Cron reservation release/idempotency cleanup | Continuous worker + secret-protected expiry hook | Expiry, worker and cleanup tests |
 | Image processing | WebP magic validation, 5MB input cap, 1600px no-enlargement bound, quality 82, 3:1 content | Media unit/integration tests |
 
+Docker operation: the default stack runs PostgreSQL, Redis, the explicit migration
+job, API and continuous worker. First-owner bootstrap has a dedicated one-off
+staff service with hidden terminal password entry. Make commands build/run/check
+inside containers, and integration tests use their own Compose network and the
+`shopnext_test` database. API contracts and staff permissions are unchanged.
+
 Intentional hardening while preserving shopping flow: callback authentication
 fails closed; callback dedupe and state changes commit together; checkout
 idempotency commits with stock/order/outbox; catalog writes share lock order;

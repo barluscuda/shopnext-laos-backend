@@ -73,8 +73,8 @@ func setup(t *testing.T) *harness {
 	must(t, db.DB.Exec("TRUNCATE idempotency_keys,sms_logs,outbox_events,audit_logs,staff_sessions,staff_users,phone_tokens,otp_codes,refunds,payment_events,attempts,order_events,items,orders,branches,providers,promo_banners,hero_slides,images,variants,products,categories CASCADE").Error)
 	redisURL, err := url.Parse(os.Getenv("TEST_REDIS_URL"))
 	must(t, err)
-	if redisURL.Host != "localhost:56380" && redisURL.Host != "127.0.0.1:56380" {
-		t.Fatal("test Redis must be the isolated compose service on loopback:56380")
+	if redisURL.Host != "localhost:56380" && redisURL.Host != "127.0.0.1:56380" && redisURL.Host != "shopnext-test-redis:6379" {
+		t.Fatal("test Redis must be the isolated test Compose service")
 	}
 	redisURL.Path = "/15"
 	limiter, err := cache.New(redisURL.String())

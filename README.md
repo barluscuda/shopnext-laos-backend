@@ -5,40 +5,47 @@ Next-generation shopping for Laos, developed by barluscuda. This is a new
 set: no customer accounts, SMS OTP, catalog/content, delivery, guest orders,
 online payment/COD, refunds, staff roles, reporting, media and notifications.
 
-## Run locally
+## Run with Docker
 
-Requires Go 1.27.1, a C compiler (WebP), Docker and Docker Compose. Configuration
-comes from environment variables, or an explicit `CONFIG_FILE`; the binaries
-do **not** load `.env`. Defaults match the development Compose services.
-See [.env.example](.env.example) for available settings.
+Requires Docker and Docker Compose; Make provides convenient commands. Go and
+the WebP C compiler run inside the build containers. Configuration comes from
+exported environment variables. Make explicitly disables Compose's automatic
+`.env` loading; the binaries also do **not** load `.env`. Make uses the checked-in
+`.env.example` and falls back to `/dev/null` if it is missing.
 
 ```sh
 make dev
-make migrate
-# Password is read from standard input, not a command-line argument.
-go run -tags nomsgpack ./cmd/staff --email owner@example.com --name Owner
-make api
-# In another terminal:
-make worker
+make staff EMAIL=owner@example.com NAME="Owner"
+make logs
 ```
 
-The staff command only creates the first owner. Subsequent staff are managed by
+`make dev` builds and starts PostgreSQL, Redis, the migration job, API and worker.
+The migration job must succeed before API/worker start. The worker runs in the
+background and restarts automatically if it exits. API readiness is checked
+before startup completes. No host Go installation is needed.
+
+The staff command prompts for a password without echoing it; use at least 10
+characters. It only creates the first owner. Subsequent staff are managed by
 an owner through the API. The development database starts empty: create a
 category, product and delivery provider through the administrative endpoints.
 Laos provinces/districts are available from `/api/v1/geography`.
 
-For an entirely containerized development environment:
+The equivalent commands without Make are:
 
 ```sh
-docker compose --profile app build
-docker compose --profile app run --rm migrate
-docker compose --profile app run --rm -T api staff --email owner@example.com --name Owner
-docker compose --profile app up -d api worker
+docker compose --env-file .env.example up --build -d --wait
+docker compose --env-file .env.example run --rm staff --email owner@example.com --name Owner
+docker compose --env-file .env.example logs --follow api worker
 ```
 
-The staff command waits for one password line on stdin. Supply it interactively
-or through a secret manager; do not put it in shell history. PostgreSQL and
-Redis bind only loopback ports 55432 and 56379. The API binds port 8080.
+For a password supplied by a secret manager over stdin, add `-T` to the staff
+`run` command. Do not put passwords in command arguments or shell history.
+PostgreSQL and Redis bind only loopback ports 55432 and 56379. The API binds
+port 8080. Containers connect to `postgres:5432` and `redis:6379`; exported
+`DATABASE_URL`/`REDIS_URL` must use addresses reachable inside Docker.
+
+Use `make worker` or `make api` to rebuild/start a service, `make migrate` for an
+explicit migration run, and `make stop` to stop the stack while preserving data.
 
 ## API
 
@@ -73,13 +80,15 @@ registration/login/profile endpoints. Staff log in through `/admin/auth/login`.
 ```sh
 make check
 make integration
-docker compose build
+make build
 ```
 
 Integration tests only reset the explicitly named `shopnext_test` database and
-Redis database 15 on the isolated loopback test service. They never reset the
-development database. Test infrastructure uses `compose.test.yaml`; stop it
-with `docker compose -f compose.test.yaml down` when finished.
+Redis database 15 on the isolated test service. They never reset the development
+database. Formatting, vetting, tests and integration tests all run in Docker.
+Test infrastructure uses a separate Compose project in `compose.test.yaml`;
+stop it with `docker compose --env-file .env.example -f compose.test.yaml down`
+when finished.
 
 See [architecture](docs/architecture.md), [feature parity](docs/feature-parity.md)
 and [operations](docs/operations.md). Real provider credentials, signature

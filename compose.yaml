@@ -1,4 +1,29 @@
 name: shopnext-laos
+x-app: &app
+  image: shopnext-laos-backend:local
+  build: .
+  environment:
+    APP_ENV: ${APP_ENV:-development}
+    HTTP_ADDR: :8080
+    DATABASE_URL: ${DATABASE_URL:-postgres://shopnext:shopnext@postgres:5432/shopnext?sslmode=disable}
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-dev}
+    SMS_PROVIDER: ${SMS_PROVIDER:-dev}
+    UPLOAD_DIR: /app/data/uploads
+    ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000 http://localhost:8080}
+    TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+    PAYMENT_HOLD_MINUTES: ${PAYMENT_HOLD_MINUTES:-15}
+    PHAJAY_BASE_URL: ${PHAJAY_BASE_URL:-https://payment-gateway.phajay.co}
+    PHAJAY_SECRET_KEY: ${PHAJAY_SECRET_KEY:-}
+    PHAJAY_WEBHOOK_SECRET: ${PHAJAY_WEBHOOK_SECRET:-}
+    PHAJAY_WEBHOOK_SIGNATURE_HEADER: ${PHAJAY_WEBHOOK_SIGNATURE_HEADER:-x-phajay-signature}
+    WENOVA_BASE_URL: ${WENOVA_BASE_URL:-https://apimicroservices.wenova.fun}
+    WENOVA_TOKEN: ${WENOVA_TOKEN:-}
+    WENOVA_SENDER_ID: ${WENOVA_SENDER_ID:-WNV-info}
+    WENOVA_USE_PACKAGE: ${WENOVA_USE_PACKAGE:-true}
+    CRON_SECRET: ${CRON_SECRET:-}
+    ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+    ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
 services:
   postgres:
     image: postgres:17.6-alpine3.22
@@ -24,37 +49,56 @@ services:
       timeout: 3s
       retries: 20
   migrate:
-    build: .
-    profiles: ["app"]
+    <<: *app
     command: ["migrate", "up"]
-    environment: &app-env
-      APP_ENV: development
-      DATABASE_URL: postgres://shopnext:shopnext@postgres:5432/shopnext?sslmode=disable
-      REDIS_URL: redis://redis:6379/0
-      PAYMENT_PROVIDER: dev
-      SMS_PROVIDER: dev
-      UPLOAD_DIR: /app/data/uploads
-      ALLOWED_ORIGINS: http://localhost:3000 http://localhost:8080
     depends_on:
       postgres: {condition: service_healthy}
   api:
-    build: .
-    profiles: ["app"]
-    environment: *app-env
+    <<: *app
+    init: true
+    restart: unless-stopped
     ports: ["127.0.0.1:8080:8080"]
     volumes: ["uploads:/app/data/uploads"]
     depends_on:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health/ready"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
   worker:
-    build: .
-    profiles: ["app"]
+    <<: *app
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
     command: ["worker"]
-    environment: *app-env
     volumes: ["uploads:/app/data/uploads"]
     depends_on:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_healthy}
+  staff:
+    <<: *app
+    profiles: ["tools"]
+    entrypoint: ["staff"]
+    command: []
+    stdin_open: true
+    tty: true
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  tools:
+    image: shopnext-laos-tools:local
+    build:
+      context: .
+      target: development
+    profiles: ["tools"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      GOCACHE: /tmp/go-build
+      GOTOOLCHAIN: local
+    volumes: [".:/src"]
 volumes:
   postgres-data:
   redis-data:

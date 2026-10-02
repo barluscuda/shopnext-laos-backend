@@ -21,6 +21,7 @@ func run() error {
 	}
 	defer rt.Close()
 	worker := &application.Worker{Service: rt.Service}
+	rt.Log.Info("worker started", zap.Duration("tick_interval", time.Minute), zap.Duration("cleanup_interval", time.Hour))
 	ticks := time.NewTicker(time.Minute)
 	defer ticks.Stop()
 	cleanup := time.NewTicker(time.Hour)
@@ -36,11 +37,15 @@ func run() error {
 	for {
 		select {
 		case <-ctx.Done():
+			rt.Log.Info("worker stopped")
 			return nil
 		case <-ticks.C:
 			work()
 		case <-cleanup.C:
-			if err := rt.Service.CleanupIdempotency(ctx); err != nil {
+			cleanupCtx, cancel := context.WithTimeout(ctx, 50*time.Second)
+			err := rt.Service.CleanupIdempotency(cleanupCtx)
+			cancel()
+			if err != nil && ctx.Err() == nil {
 				rt.Log.Error("idempotency cleanup failed", zap.Error(err))
 			}
 		}

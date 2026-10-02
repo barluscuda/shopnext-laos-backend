@@ -21,3 +21,20 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+    networks:
+      default:
+        aliases: ["shopnext-test-redis"]
+  tests:
+    image: shopnext-laos-tests:local
+    build:
+      context: .
+      target: development
+    environment:
+      APP_ENV: test
+      DATABASE_URL: postgres://shopnext:shopnext@postgres:5432/shopnext_test?sslmode=disable
+      TEST_DATABASE_URL: postgres://shopnext:shopnext@postgres:5432/shopnext_test?sslmode=disable
+      TEST_REDIS_URL: redis://shopnext-test-redis:6379/15
+    command: ["sh", "-c", "go run ./cmd/migrate up && go test -tags nomsgpack -race ./tests/integration -count=1"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}

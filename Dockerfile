@@ -1,9 +1,10 @@
-FROM golang:1.27.1-alpine3.24 AS build
+FROM golang:1.27.1-alpine3.24 AS development
 RUN apk add --no-cache build-base
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+FROM development AS build
 RUN go build -tags nomsgpack -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
  && go build -tags nomsgpack -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker \
  && go build -tags nomsgpack -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate \

@@ -25,6 +25,16 @@ availability or authorization of external merchant services.
 
 ## Migrations and release
 
+For local development, `make dev` starts the complete Docker stack, including a
+separate migration job before API and worker. `make staff EMAIL=... NAME=...`
+starts the one-off first-owner command with a hidden password prompt; named
+staff administration after bootstrap remains in the API. `make logs` follows
+API and worker logs. Make targets use `.env.example` by default; override
+`COMPOSE_ENV_FILE` or export environment variables for local settings. Use Docker
+service names for local database/Redis URLs. Shared Compose settings apply to
+migrations, API, staff and worker, including production provider credentials
+and safety validation.
+
 Back up PostgreSQL before schema changes. Run `migrate up` once per release,
 then deploy API and worker. API/worker never run AutoMigrate. `migrate status`
 is read-only. Down migrations require `ALLOW_MIGRATION_DOWN=1`; the initial
@@ -48,6 +58,12 @@ one loop, not concurrently. Sustained load may require a shorter cadence or
 larger audited batch limits. SMS retries stop after eight claims; leases last
 five minutes; backoff starts at 30 seconds and caps at one hour. A five-batch
 failure streak opens the local breaker for five minutes.
+
+The default Compose stack starts the worker after migrations and Redis readiness,
+restarts API/worker on failure and provides a 60-second worker shutdown grace
+period. The worker logs startup/shutdown and failures; a quiet running process
+between scheduled ticks is normal. Each tick and hourly cleanup has a 50-second
+deadline. `make worker` starts/rebuilds it independently when needed.
 
 `POST /api/v1/maintenance/release-expired` is an optional expiry-only cron hook,
 protected by `Authorization: Bearer <CRON_SECRET>`. It is not a replacement for
