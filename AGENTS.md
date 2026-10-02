@@ -6,6 +6,12 @@ identity. Public and administrative APIs live under `/api/v1`.
 
 ## Working rules
 
+- Whenever the user asks to commit, update `docs/CHANGELOG.md` before committing
+  and include it in the commit alongside the requested changes. Record a clear
+  summary, an Asia/Vientiane timestamp (UTC+07:00), and the base commit ID.
+  Include known commit IDs for previously committed changes; never invent the
+  ID of the commit being created. Update other affected documentation in `docs`
+  as needed. Commit all requested pending changes unless the user limits scope.
 - An explicit `[Plan mode]` instruction permits investigation and planning only.
   Resume implementation only after `[Build mode]`.
 - NeoShop at `/home/barluscuda/coding/neoshop/neoshop` is a read-only reference.

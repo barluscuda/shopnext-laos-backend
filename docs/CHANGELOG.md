@@ -2,11 +2,22 @@
 
 ## Unreleased
 
-Updated: `2026-10-02 10:57:34` (Asia/Vientiane, UTC+07:00).
+Updated: `2026-10-02 11:02:13` (Asia/Vientiane, UTC+07:00).
 
-Commit range: changes since `8361be8` (`Initial ShopNext Laos backend`).
-These changes are currently uncommitted; their ending commit ID and release tag
-will be recorded when they are committed and released.
+Base commit: `cc8c085`.
+
+### Changed
+
+- Agent rules now require a changelog update with a summary, local timestamp,
+  and base commit reference whenever the user asks to commit. The changelog must
+  be included with the requested changes, and affected documentation updated.
+
+## Docker workflow and worker lifecycle — `cc8c085`
+
+Recorded: `2026-10-02 10:57:34` (Asia/Vientiane, UTC+07:00).
+
+Commit range: `8361be8..cc8c085`.
+Changelog introduced in `ff3e803`; implementation committed in `cc8c085`.
 
 ### Changed
 
